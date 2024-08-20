@@ -1,28 +1,20 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2022 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2023 (c) Fraunhofer IOSB (Author: Kai Huebl)
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-#include <open62541/util.h>
-#include <open62541/plugin/securitypolicy_default.h>
-#include <open62541/plugin/log_stdout.h>
+#include <opcua/util.h>
+#include <opcua/plugin/securitypolicy_default.h>
+#include <opcua/plugin/log_stdout.h>
 
 #include "mp_printf.h"
 
 #ifdef UA_ENABLE_ENCRYPTION
 
-#ifdef __linux__ /* Linux only so far */
+#ifdef __linux__ 
 
 #include <stdio.h>
 #include <dirent.h>
 #include <bits/stdio_lim.h>
 
 typedef struct FileCertStore {
-    /* In-Memory security policy as a base */
+    
     UA_SecurityPolicy *innerPolicy;
     UA_String storePath;
 } SecurityPolicy_FilestoreContext;
@@ -32,12 +24,12 @@ readFileToByteString(const char *const path, UA_ByteString *data) {
     if(path == NULL || data == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Open the file */
+    
     FILE *fp = fopen(path, "rb");
     if(!fp)
         return UA_STATUSCODE_BADNOTFOUND;
 
-    /* Get the file length, allocate the data and read */
+    
     fseek(fp, 0, SEEK_END);
     UA_StatusCode retval = UA_ByteString_allocBuffer(data, (size_t)ftell(fp));
     if(retval == UA_STATUSCODE_GOOD) {
@@ -58,12 +50,12 @@ static UA_StatusCode
 writeByteStringToFile(const char *const path, const UA_ByteString *data) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Open the file */
+    
     FILE *fp = fopen(path, "wb");
     if(!fp)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Write byte string to file */
+    
     size_t len = fwrite(data->data, sizeof(UA_Byte), data->length * sizeof(UA_Byte), fp);
     if(len != data->length) {
         fclose(fp);
@@ -76,7 +68,7 @@ writeByteStringToFile(const char *const path, const UA_ByteString *data) {
 
 static bool
 checkCertificateInFilestore(char *path, const UA_ByteString newCertificate) {
-    /* Check if the file is already stored in CertStore */
+    
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     bool isStored = false;
     UA_ByteString fileData = UA_BYTESTRING_NULL;
@@ -89,19 +81,19 @@ checkCertificateInFilestore(char *path, const UA_ByteString newCertificate) {
         if(dirent->d_type != DT_REG)
             continue;
 
-        /* Get filename to load */
+        
         char filename[FILENAME_MAX];
         if(mp_snprintf(filename, FILENAME_MAX, "%s/%s", path, dirent->d_name) < 0)
             return false;
 
-        /* Load data from file */
+        
         if(fileData.length > 0)
             UA_ByteString_clear(&fileData);
         retval = readFileToByteString(filename, &fileData);
         if(retval != UA_STATUSCODE_GOOD)
             goto cleanup;
 
-        /* check if new certificate is already stored */
+        
         if(UA_ByteString_equal(&newCertificate, &fileData)) {
             isStored = true;
             goto cleanup;
@@ -118,7 +110,7 @@ cleanup:
 
 static UA_StatusCode
 createCertName(const UA_ByteString *certificate, char *fileNameBuf, size_t fileNameLen) {
-    /* Check parameter */
+    
     if(certificate == NULL || fileNameBuf == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
@@ -173,7 +165,7 @@ writeCertificateAndPrivateKeyToFilestore(const UA_String storePath,
                                          const UA_ByteString newPrivateKey) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Create the paths to the certificates and private key folders */
+    
     char ownCertPathDir[PATH_MAX];
     if(mp_snprintf(ownCertPathDir, PATH_MAX, "%.*s/%s", (int)storePath.length,
                    (char *)storePath.data, "/own/certs") < 0)
@@ -184,11 +176,11 @@ writeCertificateAndPrivateKeyToFilestore(const UA_String storePath,
                    (char *)storePath.data, "/own/private") < 0)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Check if certificate is already stored */
+    
     if(checkCertificateInFilestore(ownCertPathDir, newCertificate))
         return UA_STATUSCODE_GOOD;
 
-    /* Create filename for new certificate */
+    
     char newFilename[PATH_MAX];
     retval = createCertName(&newCertificate, newFilename, PATH_MAX);
     if(retval != UA_STATUSCODE_GOOD)
@@ -209,9 +201,9 @@ writeCertificateAndPrivateKeyToFilestore(const UA_String storePath,
     return writeByteStringToFile(newKeyFilename, &newPrivateKey);
 }
 
-/********************/
-/* AsymmetricModule */
-/********************/
+
+
+
 
 static UA_StatusCode
 asym_makeThumbprint_sp_filestore(const UA_SecurityPolicy *securityPolicy,
@@ -230,9 +222,9 @@ asym_compareCertificateThumbprint_sp_filestore(const UA_SecurityPolicy *security
     return pc->innerPolicy->asymmetricModule.compareCertificateThumbprint(pc->innerPolicy, certificateThumbprint);
 }
 
-/*******************/
-/* SymmetricModule */
-/*******************/
+
+
+
 
 static UA_StatusCode
 sym_generateKey_sp_filestore(void *policyContext, const UA_ByteString *secret,
@@ -249,9 +241,9 @@ sym_generateNonce_sp_filestore(void *policyContext, UA_ByteString *out) {
     return pc->innerPolicy->symmetricModule.generateNonce(pc->innerPolicy->policyContext, out);
 }
 
-/*****************/
-/* ChannelModule */
-/*****************/
+
+
+
 
 static UA_StatusCode
 channelContext_newContext_sp_filestore(const UA_SecurityPolicy *securityPolicy,
@@ -266,7 +258,7 @@ static UA_StatusCode
 updateCertificateAndPrivateKey_sp_filestore(UA_SecurityPolicy *securityPolicy,
                                             const UA_ByteString newCertificate,
                                             const UA_ByteString newPrivateKey) {
-    /* Temporarily save the old certificate file so that it can be removed from CertStore */
+    
     UA_ByteString localCertificateTmp;
     UA_ByteString_copy(&securityPolicy->localCertificate, &localCertificateTmp);
 

@@ -1,10 +1,10 @@
 @PACKAGE_INIT@
-include("${CMAKE_CURRENT_LIST_DIR}/open62541Targets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/opcuaTargets.cmake")
 
-set_and_check(open62541_TOOLS_DIR @PACKAGE_open62541_install_tools_dir@ CACHE PATH "Path to the directory that contains the tooling of the stack")
-set_and_check(UA_SCHEMA_DIR @PACKAGE_open62541_install_schema_dir@ CACHE PATH "Path to the directory that contains the schema files")
+set_and_check(opcua_TOOLS_DIR @PACKAGE_opcua_install_tools_dir@ CACHE PATH "Path to the directory that contains the tooling of the stack")
+set_and_check(UA_SCHEMA_DIR @PACKAGE_opcua_install_schema_dir@ CACHE PATH "Path to the directory that contains the schema files")
 
 # Macros for datatype generation, nodeset compiler, etc.
-include("${CMAKE_CURRENT_LIST_DIR}/open62541Macros.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/opcuaMacros.cmake")
 
-check_required_components(open62541)
+check_required_components(opcua)

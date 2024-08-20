@@ -1,21 +1,6 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2016-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2019 (c) HMS Industrial Networks AB (Author: Jonas Green)
- */
 
-#include <open62541/plugin/accesscontrol_default.h>
+#include <opcua/plugin/accesscontrol_default.h>
 
-/* Example access control management. Anonymous and username / password login.
- * The access rights are maximally permissive.
- *
- * FOR PRODUCTION USE, THIS EXAMPLE PLUGIN SHOULD BE REPLACED WITH LESS
- * PERMISSIVE ACCESS CONTROL.
- *
- * For TransferSubscriptions, we check whether the transfer happens between
- * Sessions for the same user. */
 
 typedef struct {
     UA_Boolean allowAnonymous;
@@ -26,16 +11,16 @@ typedef struct {
     UA_CertificateGroup verifyX509;
 } AccessControlContext;
 
-#define ANONYMOUS_POLICY "open62541-anonymous-policy"
-#define CERTIFICATE_POLICY "open62541-certificate-policy"
-#define USERNAME_POLICY "open62541-username-policy"
+#define ANONYMOUS_POLICY "opcua-anonymous-policy"
+#define CERTIFICATE_POLICY "opcua-certificate-policy"
+#define USERNAME_POLICY "opcua-username-policy"
 const UA_String anonymous_policy = UA_STRING_STATIC(ANONYMOUS_POLICY);
 const UA_String certificate_policy = UA_STRING_STATIC(CERTIFICATE_POLICY);
 const UA_String username_policy = UA_STRING_STATIC(USERNAME_POLICY);
 
-/************************/
-/* Access Control Logic */
-/************************/
+
+
+
 
 static UA_StatusCode
 activateSession_default(UA_Server *server, UA_AccessControl *ac,
@@ -47,7 +32,7 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
     AccessControlContext *context = (AccessControlContext*)ac->context;
     UA_ServerConfig *config = UA_Server_getConfig(server);
 
-    /* The empty token is interpreted as anonymous */
+    
     UA_AnonymousIdentityToken anonToken;
     UA_ExtensionObject tmpIdentity;
     if(userIdentityToken->encoding == UA_EXTENSIONOBJECT_ENCODED_NOBODY) {
@@ -59,23 +44,19 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
         userIdentityToken = &tmpIdentity;
     }
 
-    /* Could the token be decoded? */
+    
     if(userIdentityToken->encoding < UA_EXTENSIONOBJECT_DECODED)
         return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
     const UA_DataType *tokenType = userIdentityToken->content.decoded.type;
     if(tokenType == &UA_TYPES[UA_TYPES_ANONYMOUSIDENTITYTOKEN]) {
-        /* Anonymous login */
+        
         if(!context->allowAnonymous)
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
         const UA_AnonymousIdentityToken *token = (UA_AnonymousIdentityToken*)
             userIdentityToken->content.decoded.data;
 
-        /* Match the beginnig of the PolicyId.
-         * Compatibility notice: Siemens OPC Scout v10 provides an empty
-         * policyId. This is not compliant. For compatibility, assume that empty
-         * policyId == ANONYMOUS_POLICY */
         if(token->policyId.data &&
            (token->policyId.length < anonymous_policy.length ||
             strncmp((const char*)token->policyId.data,
@@ -84,11 +65,11 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
         }
     } else if(tokenType == &UA_TYPES[UA_TYPES_USERNAMEIDENTITYTOKEN]) {
-        /* Username and password */
+        
         const UA_UserNameIdentityToken *userToken = (UA_UserNameIdentityToken*)
             userIdentityToken->content.decoded.data;
 
-        /* Match the beginnig of the PolicyId */
+        
         if(userToken->policyId.length < username_policy.length ||
            strncmp((const char*)userToken->policyId.data,
                    (const char*)username_policy.data,
@@ -96,15 +77,13 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
         }
 
-        /* The userToken has been decrypted by the server before forwarding
-         * it to the plugin. This information can be used here. */
-        /* if(userToken->encryptionAlgorithm.length > 0) {} */
+        
 
-        /* Empty username and password */
+        
         if(userToken->userName.length == 0 && userToken->password.length == 0)
             return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
 
-        /* Try to match username/pw */
+        
         UA_Boolean match = false;
         if(context->loginCallback) {
             if(context->loginCallback(&userToken->userName, &userToken->password,
@@ -123,11 +102,11 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
         if(!match)
             return UA_STATUSCODE_BADUSERACCESSDENIED;
     } else if(tokenType == &UA_TYPES[UA_TYPES_X509IDENTITYTOKEN]) {
-        /* x509 certificate */
+        
         const UA_X509IdentityToken *userToken = (UA_X509IdentityToken*)
             userIdentityToken->content.decoded.data;
 
-        /* Match the beginnig of the PolicyId */
+        
         if(userToken->policyId.length < certificate_policy.length ||
            strncmp((const char*)userToken->policyId.data,
                    (const char*)certificate_policy.data,
@@ -143,7 +122,7 @@ activateSession_default(UA_Server *server, UA_AccessControl *ac,
         if(res != UA_STATUSCODE_GOOD)
             return UA_STATUSCODE_BADIDENTITYTOKENREJECTED;
     } else {
-        /* Unsupported token type */
+        
         return UA_STATUSCODE_BADIDENTITYTOKENINVALID;
     }
 
@@ -226,7 +205,7 @@ allowTransferSubscription_default(UA_Server *server, UA_AccessControl *ac,
                                   const UA_NodeId *newSessionId, void *newSessionContext) {
     if(!oldSessionId)
         return true;
-    /* Allow the transfer if the same user-id was used to activate both sessions */
+    
     UA_Variant session1UserId;
     UA_Variant_init(&session1UserId);
     UA_Server_getSessionAttribute(server, oldSessionId,
@@ -264,9 +243,9 @@ allowHistoryUpdateDeleteRawModified_default(UA_Server *server, UA_AccessControl 
 }
 #endif
 
-/***************************************/
-/* Create Delete Access Control Plugin */
-/***************************************/
+
+
+
 
 static void clear_default(UA_AccessControl *ac) {
     UA_Array_delete((void*)(uintptr_t)ac->userTokenPolicies,
@@ -333,14 +312,14 @@ UA_AccessControl_default(UA_ServerConfig *config,
     memset(context, 0, sizeof(AccessControlContext));
     ac->context = context;
 
-    /* Allow anonymous? */
+    
     context->allowAnonymous = allowAnonymous;
     if(allowAnonymous) {
         UA_LOG_INFO(config->logging, UA_LOGCATEGORY_SERVER,
                     "AccessControl: Anonymous login is enabled");
     }
 
-    /* Copy username/password to the access control plugin */
+    
     if(usernamePasswordLoginSize > 0) {
         context->usernamePasswordLogin = (UA_UsernamePasswordLogin*)
             UA_malloc(usernamePasswordLoginSize * sizeof(UA_UsernamePasswordLogin));
@@ -366,7 +345,7 @@ UA_AccessControl_default(UA_ServerConfig *config,
         }
     }
 
-    /* Set the allowed policies */
+    
     size_t policies = 0;
     if(allowAnonymous)
         policies++;

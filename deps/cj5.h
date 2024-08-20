@@ -129,12 +129,9 @@ typedef struct cj5_result {
 } cj5_result;
 
 typedef struct cj5_options {
-    bool stop_early; /* Return when the first element was parsed. Otherwise an
-                      * error is returned if the input was not fully
-                      * processed. (default: false) */
 } cj5_options;
 
-/* Options can be NULL */
+
 CJ5_API cj5_result
 cj5_parse(const char *json5, unsigned int len,
           cj5_token *tokens, unsigned int max_tokens,
@@ -178,4 +175,4 @@ cj5_skip(const cj5_result *r, unsigned int *tok_index);
 CJ5_API cj5_error_code
 cj5_find(const cj5_result *r, unsigned int *tok_index, const char *key);
 
-#endif /* __CJ5_H_ */
+#endif 

@@ -1,17 +1,7 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2017-2022 Fraunhofer IOSB (Author: Andreas Ebner)
- * Copyright (c) 2019-2021 Kalycito Infotech Private Limited
- * Copyright (c) 2020 Yannick Wallerer, Siemens AG
- * Copyright (c) 2020-2022 Thomas Fischer, Siemens AG
- * Copyright (c) 2022 Linutronix GmbH (Author: Muddasir Shakil)
- */
 
 #include "ua_pubsub_ns0.h"
 
-#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL /* conditional compilation */
+#ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL 
 
 typedef struct {
     UA_NodeId parentNodeId;
@@ -344,18 +334,11 @@ addPubSubConnectionConfig(UA_Server *server, UA_PubSubConnectionDataType *pubsub
     return retVal;
 }
 
-/**
- * **WriterGroup handling**
- *
- * The WriterGroup (WG) is part of the connection and contains the primary
- * configuration parameters for the message creation. */
 static UA_StatusCode
 addWriterGroupConfig(UA_Server *server, UA_NodeId connectionId,
                      UA_WriterGroupDataType *writerGroup, UA_NodeId *writerGroupId){
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Now we create a new WriterGroupConfig and add the group to the existing
-     * PubSubConnection. */
     UA_WriterGroupConfig writerGroupConfig;
     memset(&writerGroupConfig, 0, sizeof(UA_WriterGroupConfig));
     writerGroupConfig.name = writerGroup->name;
@@ -383,12 +366,6 @@ addWriterGroupConfig(UA_Server *server, UA_NodeId connectionId,
     return UA_WriterGroup_create(server, connectionId, &writerGroupConfig, writerGroupId);
 }
 
-/**
- * **DataSetWriter handling**
- *
- * A DataSetWriter (DSW) is the glue between the WG and the PDS. The DSW is
- * linked to exactly one PDS and contains additional informations for the
- * message generation. */
 static UA_StatusCode
 addDataSetWriterConfig(UA_Server *server, const UA_NodeId *writerGroupId,
                        UA_DataSetWriterDataType *dataSetWriter,
@@ -407,8 +384,6 @@ addDataSetWriterConfig(UA_Server *server, const UA_NodeId *writerGroupId,
     if(UA_NodeId_isNull(&publishedDataSetId))
         return UA_STATUSCODE_BADPARENTNODEIDINVALID;
 
-    /* We need now a DataSetWriter within the WriterGroup. This means we must
-     * create a new DataSetWriterConfig and add call the addWriterGroup function. */
     UA_DataSetWriterConfig dataSetWriterConfig;
     memset(&dataSetWriterConfig, 0, sizeof(UA_DataSetWriterConfig));
     dataSetWriterConfig.name = dataSetWriter->name;
@@ -419,13 +394,7 @@ addDataSetWriterConfig(UA_Server *server, const UA_NodeId *writerGroupId,
                                    &dataSetWriterConfig, dataSetWriterId);
 }
 
-/**
- * **ReaderGroup**
- *
- * ReaderGroup is used to group a list of DataSetReaders. All ReaderGroups are
- * created within a PubSubConnection and automatically deleted if the connection
- * is removed. All network message related filters are only available in the DataSetReader. */
-/* Add ReaderGroup to the created connection */
+
 static UA_StatusCode
 addReaderGroupConfig(UA_Server *server, UA_NodeId connectionId,
                      UA_ReaderGroupDataType *readerGroup,
@@ -439,11 +408,6 @@ addReaderGroupConfig(UA_Server *server, UA_NodeId connectionId,
                                  &readerGroupConfig, readerGroupId);
 }
 
-/**
- * **SubscribedDataSet**
- *
- * Set SubscribedDataSet type to TargetVariables data type.
- * Add subscribedvariables to the DataSetReader */
 static UA_StatusCode
 addSubscribedVariables(UA_Server *server, UA_NodeId dataSetReaderId,
                        UA_DataSetReaderDataType *dataSetReader,
@@ -479,20 +443,16 @@ addSubscribedVariables(UA_Server *server, UA_NodeId dataSetReaderId,
             &oAttr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
             NULL, &folderId);
 
-    /* The SubscribedDataSet option TargetVariables defines a list of Variable
-     * mappings between received DataSet fields and target Variables in the
-     * Subscriber AddressSpace. The values subscribed from the Publisher are
-     * updated in the value field of these variables */
 
-    /* Create the TargetVariables with respect to DataSetMetaData fields */
+    
     UA_FieldTargetVariable *targetVarsData = (UA_FieldTargetVariable *)
         UA_calloc(targetVars->targetVariablesSize, sizeof(UA_FieldTargetVariable));
     for(size_t i = 0; i < targetVars->targetVariablesSize; i++) {
-        /* Prepare the output structure */
+        
         UA_FieldTargetDataType_init(&targetVarsData[i].targetVariable);
         targetVarsData[i].targetVariable.attributeId  = targetVars->targetVariables[i].attributeId;
 
-        /* Add variable for the field */
+        
         UA_VariableAttributes vAttr = UA_VariableAttributes_default;
         vAttr.description = pMetaData->fields[i].description;
         vAttr.displayName.locale = UA_STRING("");
@@ -520,14 +480,6 @@ addSubscribedVariables(UA_Server *server, UA_NodeId dataSetReaderId,
     return retVal;
 }
 
-/**
- * **DataSetReader**
- *
- * DataSetReader can receive NetworkMessages with the DataSetMessage
- * of interest sent by the Publisher. DataSetReader provides
- * the configuration necessary to receive and process DataSetMessages
- * on the Subscriber side. DataSetReader must be linked with a
- * SubscribedDataSet and be contained within a ReaderGroup. */
 static UA_StatusCode
 addDataSetReaderConfig(UA_Server *server, UA_NodeId readerGroupId,
                        UA_DataSetReaderDataType *dataSetReader,
@@ -545,7 +497,7 @@ addDataSetReaderConfig(UA_Server *server, UA_NodeId readerGroupId,
     readerConfig.writerGroupId = dataSetReader->writerGroupId;
     readerConfig.dataSetWriterId = dataSetReader->dataSetWriterId;
 
-    /* Setting up Meta data configuration in DataSetReader */
+    
     UA_DataSetMetaDataType *pMetaData;
     pMetaData = &readerConfig.dataSetMetaData;
     UA_DataSetMetaDataType_init (pMetaData);
@@ -575,9 +527,9 @@ addDataSetReaderConfig(UA_Server *server, UA_NodeId readerGroupId,
     return retVal;
 }
 
-/*************************************************/
-/*            PubSubConnection                   */
-/*************************************************/
+
+
+
 
 UA_StatusCode
 addPubSubConnectionRepresentation(UA_Server *server, UA_PubSubConnection *connection) {
@@ -591,7 +543,7 @@ addPubSubConnectionRepresentation(UA_Server *server, UA_PubSubConnection *connec
     UA_ObjectAttributes attr = UA_ObjectAttributes_default;
     attr.displayName = UA_LOCALIZEDTEXT("", connectionName);
     retVal |= addNode_begin(server, UA_NODECLASS_OBJECT,
-                            UA_NODEID_NUMERIC(1, 0), /* Generate a new id */
+                            UA_NODEID_NUMERIC(1, 0), 
                             UA_NS0ID(PUBLISHSUBSCRIBE),
                             UA_NS0ID(HASPUBSUBCONNECTION),
                             UA_QUALIFIEDNAME(0, connectionName),
@@ -717,8 +669,6 @@ addPubSubConnectionLocked(UA_Server *server,
             }
         }
 
-        /* TODO: Need to handle the UA_Server_setWriterGroupOperational based on
-         * the status variable in information model */
         UA_WriterGroup *wg = UA_WriterGroup_findWGbyId(server, writerGroupId);
         if(!wg)
             continue;
@@ -753,8 +703,6 @@ addPubSubConnectionLocked(UA_Server *server,
 
         }
 
-        /* TODO: Need to handle the UA_Server_setReaderGroupOperational based on
-         * the status variable in information model */
         UA_ReaderGroup *rg = UA_ReaderGroup_findRGbyId(server, readerGroupId);
         if(!rg)
             continue;
@@ -766,7 +714,7 @@ addPubSubConnectionLocked(UA_Server *server,
         }
     }
 
-    /* Set ouput value */
+    
     UA_Variant_setScalarCopy(output, &connectionId, &UA_TYPES[UA_TYPES_NODEID]);
     return UA_STATUSCODE_GOOD;
 }
@@ -802,9 +750,9 @@ removeConnectionAction(UA_Server *server,
     return retVal;
 }
 
-/**********************************************/
-/*               DataSetReader                */
-/**********************************************/
+
+
+
 
 UA_StatusCode
 addDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReader){
@@ -822,7 +770,7 @@ addDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReade
 
     UA_ObjectAttributes object_attr = UA_ObjectAttributes_default;
     object_attr.displayName = UA_LOCALIZEDTEXT("", dsrName);
-    retVal = addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), /* create an id */
+    retVal = addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), 
                      dataSetReader->linkedReaderGroup->head.identifier,
                      UA_NODEID_NUMERIC(0, UA_NS0ID_HASDATASETREADER),
                      UA_QUALIFIEDNAME(0, dsrName),
@@ -830,8 +778,6 @@ addDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReade
                      &object_attr, &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
                      NULL, &dataSetReader->head.identifier);
 
-    /* Add childNodes such as PublisherId, WriterGroupId and DataSetWriterId in
-     * DataSetReader object */
     publisherIdNode = findSingleChildNode(server, UA_QUALIFIEDNAME(0, "PublisherId"),
                                           UA_NODEID_NUMERIC(0, UA_NS0ID_HASPROPERTY),
                                           dataSetReader->head.identifier);
@@ -881,7 +827,7 @@ addDataSetReaderRepresentation(UA_Server *server, UA_DataSetReader *dataSetReade
     retVal |= addVariableValueSource(server, valueCallback, stateIdNode,
                                      dataSetReaderStateContext);
 
-    /* Update childNode with values from Publisher */
+    
     UA_Variant value;
     UA_Variant_init(&value);
     UA_Variant_setScalar(&value, &dataSetReader->config.writerGroupId,
@@ -948,9 +894,9 @@ removeDataSetReaderAction(UA_Server *server,
     return UA_Server_removeDataSetReader(server, nodeToRemove);
 }
 
-/*************************************************/
-/*                PublishedDataSet               */
-/*************************************************/
+
+
+
 static UA_StatusCode
 addDataSetFolderAction(UA_Server *server,
                        const UA_NodeId *sessionId, void *sessionContext,
@@ -958,7 +904,7 @@ addDataSetFolderAction(UA_Server *server,
                        const UA_NodeId *objectId, void *objectContext,
                        size_t inputSize, const UA_Variant *input,
                        size_t outputSize, UA_Variant *output){
-    /* defined in R 1.04 9.1.4.5.7 */
+    
     UA_StatusCode retVal = UA_STATUSCODE_GOOD;
     UA_String newFolderName = *((UA_String *) input[0].data);
     UA_NodeId generatedId;
@@ -1010,7 +956,7 @@ addPublishedDataItemsRepresentation(UA_Server *server,
 
     UA_ObjectAttributes object_attr = UA_ObjectAttributes_default;
     object_attr.displayName = UA_LOCALIZEDTEXT("", pdsName);
-    retVal = addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), /* Create a new id */
+    retVal = addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), 
                      UA_NS0ID(PUBLISHSUBSCRIBE_PUBLISHEDDATASETS),
                      UA_NS0ID(HASCOMPONENT),
                      UA_QUALIFIEDNAME(0, pdsName),
@@ -1111,7 +1057,7 @@ addPublishedDataItemsAction(UA_Server *server,
 
     UA_DataSetFieldConfig dataSetFieldConfig;
     for(size_t j = 0; j < variablesToAddSize; ++j) {
-        /* Prepare the config */
+        
         memset(&dataSetFieldConfig, 0, sizeof(UA_DataSetFieldConfig));
         dataSetFieldConfig.dataSetFieldType = UA_PUBSUB_DATASETFIELD_VARIABLE;
         dataSetFieldConfig.field.variable.fieldNameAlias = fieldNameAliases[j];
@@ -1162,9 +1108,9 @@ removePublishedDataSetAction(UA_Server *server,
     return UA_Server_removePublishedDataSet(server, nodeToRemove);
 }
 
-/**********************************************/
-/*       StandaloneSubscribedDataSet          */
-/**********************************************/
+
+
+
 
 UA_StatusCode
 addStandaloneSubscribedDataSetRepresentation(UA_Server *server,
@@ -1181,7 +1127,7 @@ addStandaloneSubscribedDataSetRepresentation(UA_Server *server,
 
     UA_ObjectAttributes object_attr = UA_ObjectAttributes_default;
     object_attr.displayName = UA_LOCALIZEDTEXT("", sdsName);
-    addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), /* Create a new id */
+    addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), 
             UA_NS0ID(PUBLISHSUBSCRIBE_SUBSCRIBEDDATASETS),
             UA_NS0ID(HASCOMPONENT),
             UA_QUALIFIEDNAME(0, sdsName),
@@ -1246,9 +1192,9 @@ addStandaloneSubscribedDataSetRepresentation(UA_Server *server,
     return ret;
 }
 
-/**********************************************/
-/*               WriterGroup                  */
-/**********************************************/
+
+
+
 
 static UA_StatusCode
 readContentMask(UA_Server *server, const UA_NodeId *sessionId,
@@ -1308,7 +1254,7 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup) {
     UA_ObjectAttributes object_attr = UA_ObjectAttributes_default;
     object_attr.displayName = UA_LOCALIZEDTEXT("", wgName);
     retVal = addNode(server, UA_NODECLASS_OBJECT,
-                     UA_NODEID_NUMERIC(1, 0), /* create a new id */
+                     UA_NODEID_NUMERIC(1, 0), 
                      writerGroup->linkedConnection->head.identifier, UA_NS0ID(HASCOMPONENT),
                      UA_QUALIFIEDNAME(0, wgName), UA_NS0ID(WRITERGROUPTYPE), &object_attr,
                      &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES], NULL, &writerGroup->head.identifier);
@@ -1387,7 +1333,7 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup) {
                       &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
                       NULL, NULL);
 
-    /* Find the variable with the content mask */
+    
 
     UA_NodeId messageSettingsId =
         findSingleChildNode(server, UA_QUALIFIEDNAME(0, "MessageSettings"),
@@ -1396,20 +1342,20 @@ addWriterGroupRepresentation(UA_Server *server, UA_WriterGroup *writerGroup) {
         findSingleChildNode(server, UA_QUALIFIEDNAME(0, "NetworkMessageContentMask"),
                             UA_NS0ID(HASPROPERTY), messageSettingsId);
     if(!UA_NodeId_isNull(&contentMaskId)) {
-        /* Set the callback */
+        
         UA_DataSource ds;
         ds.read = readContentMask;
         ds.write = writeContentMask;
         setVariableNode_dataSource(server, contentMaskId, ds);
         setNodeContext(server, contentMaskId, writerGroup);
 
-        /* Make writable */
+        
         writeAccessLevelAttribute(server, contentMaskId,
                                   UA_ACCESSLEVELMASK_WRITE | UA_ACCESSLEVELMASK_READ);
 
     }
 
-    /* Add reference to methods */
+    
     if(server->config.pubSubConfig.enableInformationModelMethods) {
         retVal |= addRef(server, writerGroup->head.identifier,
                          UA_NS0ID(HASCOMPONENT),
@@ -1467,9 +1413,9 @@ removeGroupAction(UA_Server *server,
     }
 }
 
-/**********************************************/
-/*               ReserveIds                   */
-/**********************************************/
+
+
+
 
 static UA_StatusCode
 addReserveIdsLocked(UA_Server *server,
@@ -1495,7 +1441,7 @@ addReserveIdsLocked(UA_Server *server,
         return retVal;
     }
 
-    /* Check the transportProfileUri */
+    
     UA_String profile_1 = UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-mqtt-uadp");
     UA_String profile_2 = UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-mqtt-json");
 
@@ -1535,9 +1481,9 @@ addReserveIdsAction(UA_Server *server,
     return res;
 }
 
-/**********************************************/
-/*               ReaderGroup                  */
-/**********************************************/
+
+
+
 
 UA_StatusCode
 addReaderGroupRepresentation(UA_Server *server, UA_ReaderGroup *readerGroup) {
@@ -1551,7 +1497,7 @@ addReaderGroupRepresentation(UA_Server *server, UA_ReaderGroup *readerGroup) {
     UA_ObjectAttributes object_attr = UA_ObjectAttributes_default;
     object_attr.displayName = UA_LOCALIZEDTEXT("", rgName);
     UA_StatusCode retVal =
-        addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), /* create an id */
+        addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), 
                 readerGroup->linkedConnection->head.identifier,
                 UA_NS0ID(HASCOMPONENT),
                 UA_QUALIFIEDNAME(0, rgName), UA_NS0ID(READERGROUPTYPE),
@@ -1653,7 +1599,7 @@ updateSecurityGroupProperties(UA_Server *server, UA_NodeId *securityGroupNodeId,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /*AddValueCallback*/
+    
     UA_Variant_setScalar(&value, &config->securityPolicyUri, &UA_TYPES[UA_TYPES_STRING]);
     retval = writeObjectProperty(server, *securityGroupNodeId,
                                  UA_QUALIFIEDNAME(0, "SecurityPolicyUri"), value);
@@ -1725,12 +1671,12 @@ addSecurityGroupRepresentation(UA_Server *server, UA_SecurityGroup *securityGrou
     return retval;
 }
 
-#endif /* UA_ENABLE_PUBSUB_INFORMATIONMODEL*/
-#endif /* UA_ENABLE_PUBSUB_SKS */
+#endif 
+#endif 
 
-/**********************************************/
-/*               DataSetWriter                */
-/**********************************************/
+
+
+
 
 UA_StatusCode
 addDataSetWriterRepresentation(UA_Server *server, UA_DataSetWriter *dataSetWriter) {
@@ -1748,7 +1694,7 @@ addDataSetWriterRepresentation(UA_Server *server, UA_DataSetWriter *dataSetWrite
     UA_ObjectAttributes object_attr = UA_ObjectAttributes_default;
     object_attr.displayName = UA_LOCALIZEDTEXT("", dswName);
     retVal =
-        addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), /* create an id */
+        addNode(server, UA_NODECLASS_OBJECT, UA_NODEID_NUMERIC(1, 0), 
                 dataSetWriter->linkedWriterGroup->head.identifier, UA_NS0ID(HASDATASETWRITER),
                 UA_QUALIFIEDNAME(0, dswName), UA_NS0ID(DATASETWRITERTYPE), &object_attr,
                 &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
@@ -1896,10 +1842,6 @@ removeDataSetWriterAction(UA_Server *server,
 }
 
 #ifdef UA_ENABLE_PUBSUB_SKS
-/**
- * @note The user credentials and permissions are checked in the AccessControl plugin
- * before this callback is executed.
- */
 static UA_StatusCode
 setSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessionContext,
                       const UA_NodeId *methodId, void *methodContext,
@@ -1907,7 +1849,7 @@ setSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
                       const UA_Variant *input, size_t outputSize, UA_Variant *output) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Validate the arguments */
+    
     if(!server || !input)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     if(inputSize < 7)
@@ -1915,23 +1857,23 @@ setSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
     if(inputSize > 7 || outputSize > 0)
         return UA_STATUSCODE_BADTOOMANYARGUMENTS;
 
-    /* Check whether the channel is encrypted according to specification */
+    
     UA_Session *session = getSessionById(server, sessionId);
     if(!session || !session->channel)
         return UA_STATUSCODE_BADINTERNALERROR;
     if(session->channel->securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
         return UA_STATUSCODE_BADSECURITYMODEINSUFFICIENT;
 
-    /*check for types*/
-    if(!UA_Variant_hasScalarType(&input[0], &UA_TYPES[UA_TYPES_STRING]) || /*SecurityGroupId*/
-        !UA_Variant_hasScalarType(&input[1], &UA_TYPES[UA_TYPES_STRING]) || /*SecurityPolicyUri*/
-        !UA_Variant_hasScalarType(&input[2], &UA_TYPES[UA_TYPES_INTEGERID]) || /*CurrentTokenId*/
-        !UA_Variant_hasScalarType(&input[3], &UA_TYPES[UA_TYPES_BYTESTRING]) || /*CurrentKey*/
-        !UA_Variant_hasArrayType(&input[4], &UA_TYPES[UA_TYPES_BYTESTRING]) || /*FutureKeys*/
+    
+    if(!UA_Variant_hasScalarType(&input[0], &UA_TYPES[UA_TYPES_STRING]) || 
+        !UA_Variant_hasScalarType(&input[1], &UA_TYPES[UA_TYPES_STRING]) || 
+        !UA_Variant_hasScalarType(&input[2], &UA_TYPES[UA_TYPES_INTEGERID]) || 
+        !UA_Variant_hasScalarType(&input[3], &UA_TYPES[UA_TYPES_BYTESTRING]) || 
+        !UA_Variant_hasArrayType(&input[4], &UA_TYPES[UA_TYPES_BYTESTRING]) || 
         (!UA_Variant_hasScalarType(&input[5], &UA_TYPES[UA_TYPES_DURATION]) &&
-        !UA_Variant_hasScalarType(&input[5], &UA_TYPES[UA_TYPES_DOUBLE])) || /*TimeToNextKey*/
+        !UA_Variant_hasScalarType(&input[5], &UA_TYPES[UA_TYPES_DOUBLE])) || 
         (!UA_Variant_hasScalarType(&input[6], &UA_TYPES[UA_TYPES_DURATION]) &&
-        !UA_Variant_hasScalarType(&input[6], &UA_TYPES[UA_TYPES_DOUBLE]))) /*TimeToNextKey*/
+        !UA_Variant_hasScalarType(&input[6], &UA_TYPES[UA_TYPES_DOUBLE]))) 
         return UA_STATUSCODE_BADTYPEMISMATCH;
 
     UA_StatusCode retval = UA_STATUSCODE_BAD;
@@ -1980,7 +1922,7 @@ setSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
     if(msTimeToNextKey > 0)
         callbackTime = msTimeToNextKey;
 
-    /*move to setSecurityKeysAction*/
+    
     retval = UA_PubSubKeyStorage_addKeyRolloverCallback(
         server, ks, (UA_ServerCallback)UA_PubSubKeyStorage_keyRolloverCallback, callbackTime,
         &ks->callBackId);
@@ -2008,7 +1950,7 @@ getSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
                       const UA_Variant *input, size_t outputSize, UA_Variant *output) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Validate the arguments */
+    
     if(!server || !input)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     if(inputSize < 3 || outputSize < 5)
@@ -2016,25 +1958,25 @@ getSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
     if(inputSize > 3 || outputSize > 5)
         return UA_STATUSCODE_BADTOOMANYARGUMENTS;
 
-    /* Check whether the channel is encrypted according to specification */
+    
     UA_Session *session = getSessionById(server, sessionId);
     if(!session || !session->channel)
         return UA_STATUSCODE_BADINTERNALERROR;
     if(session->channel->securityMode != UA_MESSAGESECURITYMODE_SIGNANDENCRYPT)
         return UA_STATUSCODE_BADSECURITYMODEINSUFFICIENT;
 
-    /*check for types*/
+    
     if(!UA_Variant_hasScalarType(&input[0],
-                                 &UA_TYPES[UA_TYPES_STRING]) || /*SecurityGroupId*/
+                                 &UA_TYPES[UA_TYPES_STRING]) || 
        !UA_Variant_hasScalarType(&input[1],
-                                 &UA_TYPES[UA_TYPES_INTEGERID]) || /*StartingTokenId*/
+                                 &UA_TYPES[UA_TYPES_INTEGERID]) || 
        !UA_Variant_hasScalarType(&input[2],
-                                 &UA_TYPES[UA_TYPES_UINT32])) /*RequestedKeyCount*/
+                                 &UA_TYPES[UA_TYPES_UINT32])) 
         return UA_STATUSCODE_BADTYPEMISMATCH;
 
     UA_StatusCode retval = UA_STATUSCODE_BAD;
     UA_UInt32 currentKeyCount = 1;
-    /* input */
+    
     UA_String *securityGroupId = (UA_String *)input[0].data;
     UA_UInt32 startingTokenId = *(UA_UInt32 *)input[1].data;
     UA_UInt32 requestedKeyCount = *(UA_UInt32 *)input[2].data;
@@ -2055,41 +1997,37 @@ getSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
     if(!executable)
         return UA_STATUSCODE_BADUSERACCESSDENIED;
 
-    /* If the caller requests a number larger than the Security Key Service permits, then
-     * the SKS shall return the maximum it allows.*/
     if(requestedKeyCount > sg->config.maxFutureKeyCount)
         requestedKeyCount =(UA_UInt32) sg->keyStorage->keyListSize;
     else
-        requestedKeyCount = requestedKeyCount + currentKeyCount; /* Add Current keyCount */
+        requestedKeyCount = requestedKeyCount + currentKeyCount; 
 
-    /*The current token is requested by passing 0.*/
+    
     UA_PubSubKeyListItem *startingItem = NULL;
     if(startingTokenId == 0) {
-        /* currentItem is always set by the server when a security group is added */
+        
         UA_assert(sg->keyStorage->currentItem != NULL);
         startingItem = sg->keyStorage->currentItem;
     } else {
         retval = UA_PubSubKeyStorage_getKeyByKeyID(
             startingTokenId, sg->keyStorage, &startingItem);
-        /*If the StartingTokenId is unknown, the oldest (firstItem) available tokens are
-         * returned. */
         if(retval == UA_STATUSCODE_BADNOTFOUND)
             startingItem =  TAILQ_FIRST(&sg->keyStorage->keyList);
     }
 
-    /*SecurityPolicyUri*/
+    
     retval = UA_Variant_setScalarCopy(&output[0], &(sg->keyStorage->policy->policyUri),
                          &UA_TYPES[UA_TYPES_STRING]);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /*FirstTokenId*/
+    
     retval = UA_Variant_setScalarCopy(&output[1], &startingItem->keyID,
                                       &UA_TYPES[UA_TYPES_INTEGERID]);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /*TimeToNextKey*/
+    
     UA_EventLoop *el = server->config.eventLoop;
     UA_DateTime baseTime = sg->baseTime;
     UA_DateTime currentTime = el->dateTime_nowMonotonic(el);
@@ -2102,13 +2040,13 @@ getSecurityKeysLocked(UA_Server *server, const UA_NodeId *sessionId, void *sessi
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /*KeyLifeTime*/
+    
     retval = UA_Variant_setScalarCopy(&output[4], &sg->config.keyLifeTime,
                          &UA_TYPES[UA_TYPES_DURATION]);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /*Keys*/
+    
     UA_PubSubKeyListItem *iterator = startingItem;
     output[2].data = (UA_ByteString *)UA_calloc(requestedKeyCount, startingItem->key.length);
     if(!output[2].data)
@@ -2145,9 +2083,9 @@ getSecurityKeysAction(UA_Server *server, const UA_NodeId *sessionId, void *sessi
 }
 #endif
 
-/**********************************************/
-/*                Destructors                 */
-/**********************************************/
+
+
+
 
 static void
 connectionTypeDestructor(UA_Server *server,
@@ -2326,14 +2264,12 @@ standaloneSubscribedDataSetTypeDestructor(UA_Server *server,
     UA_UNLOCK(&server->serviceMutex);
 }
 
-/*************************************/
-/*         PubSub configurator       */
-/*************************************/
+
+
+
 
 #ifdef UA_ENABLE_PUBSUB_FILE_CONFIG
 
-/* Callback function that will be executed when the method "PubSub configurator
- * (replace config)" is called. */
 static UA_StatusCode
 UA_loadPubSubConfigMethodCallback(UA_Server *server,
                                   const UA_NodeId *sessionId, void *sessionContext,
@@ -2354,8 +2290,6 @@ UA_loadPubSubConfigMethodCallback(UA_Server *server,
     }
 }
 
-/* Callback function that will be executed when the method "PubSub configurator
- *  (delete config)" is called. */
 static UA_StatusCode
 UA_deletePubSubConfigMethodCallback(UA_Server *server,
                                     const UA_NodeId *sessionId, void *sessionContext,
@@ -2384,7 +2318,7 @@ initPubSubNS0(UA_Server *server) {
                                           profileArray, 1, &UA_TYPES[UA_TYPES_STRING]);
 
     if(server->config.pubSubConfig.enableInformationModelMethods) {
-        /* Add missing references */
+        
         retVal |= addRef(server, UA_NS0ID(PUBLISHSUBSCRIBE_PUBLISHEDDATASETS),
                          UA_NS0ID(HASCOMPONENT), UA_NS0ID(DATASETFOLDERTYPE_ADDDATASETFOLDER), true);
         retVal |= addRef(server, UA_NS0ID(PUBLISHSUBSCRIBE_PUBLISHEDDATASETS),
@@ -2394,7 +2328,7 @@ initPubSubNS0(UA_Server *server) {
         retVal |= addRef(server, UA_NS0ID(PUBLISHSUBSCRIBE_PUBLISHEDDATASETS),
                          UA_NS0ID(HASCOMPONENT), UA_NS0ID(DATASETFOLDERTYPE_REMOVEDATASETFOLDER), true);
 
-        /* Set method callbacks */
+        
         retVal |= setMethodNode_callback(server, UA_NS0ID(PUBLISHSUBSCRIBE_ADDCONNECTION), addPubSubConnectionAction);
         retVal |= setMethodNode_callback(server, UA_NS0ID(PUBLISHSUBSCRIBE_REMOVECONNECTION), removeConnectionAction);
         retVal |= setMethodNode_callback(server, UA_NS0ID(DATASETFOLDERTYPE_ADDDATASETFOLDER), addDataSetFolderAction);
@@ -2417,8 +2351,6 @@ initPubSubNS0(UA_Server *server) {
 #endif
 
 #ifdef UA_ENABLE_PUBSUB_FILE_CONFIG
-        /* Adds method node to server. This method is used to load binary files for
-         * PubSub configuration and delete / replace old PubSub configurations. */
         UA_Argument inputArgument;
         UA_Argument_init(&inputArgument);
         inputArgument.description = UA_LOCALIZEDTEXT("", "PubSub config binfile");
@@ -2439,8 +2371,6 @@ initPubSubNS0(UA_Server *server) {
                                 0, NULL, UA_NODEID_NULL, NULL,
                                 NULL, NULL);
 
-        /* Adds method node to server. This method is used to delete the current
-         * PubSub configuration. */
         configAttr.description = UA_LOCALIZEDTEXT("","Delete current PubSub configuration");
         configAttr.displayName = UA_LOCALIZEDTEXT("","DeletePubSubConfiguration");
         configAttr.executable = true;
@@ -2454,7 +2384,7 @@ initPubSubNS0(UA_Server *server) {
                                 NULL, NULL);
 #endif
     } else {
-        /* Remove methods */
+        
         retVal |= deleteReference(server, UA_NS0ID(PUBLISHSUBSCRIBE),
                                   UA_NS0ID(HASCOMPONENT), true,
                                   UA_NS0EXID(PUBLISHSUBSCRIBE_ADDCONNECTION), false);
@@ -2463,7 +2393,7 @@ initPubSubNS0(UA_Server *server) {
                                   UA_NS0EXID(PUBLISHSUBSCRIBE_REMOVECONNECTION), false);
     }
 
-    /* Set the object-type destructors */
+    
     UA_NodeTypeLifecycle lifeCycle;
     lifeCycle.constructor = NULL;
 
@@ -2529,4 +2459,4 @@ connectDataSetReaderToDataSet(UA_Server *server, UA_NodeId dsrId, UA_NodeId stan
     return retVal;
 }
 
-#endif /* UA_ENABLE_PUBSUB_INFORMATIONMODEL */
+#endif 

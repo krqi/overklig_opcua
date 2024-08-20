@@ -1,16 +1,9 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2019 ifak e.V. Magdeburg (Holger Zipper)
- * Copyright (c) 2022 Linutronix GmbH (Author: Muddasir Shakil)
- */
 
-#include <open62541/server_pubsub.h>
+#include <opcua/server_pubsub.h>
 
 #include "ua_pubsub_ns0.h"
 
-#ifdef UA_ENABLE_PUBSUB_SKS /* conditional compilation */
+#ifdef UA_ENABLE_PUBSUB_SKS 
 
 #include "server/ua_server_internal.h"
 
@@ -49,9 +42,6 @@ generateKeyData(const UA_PubSubSecurityPolicy *policy, UA_ByteString *key) {
 
     UA_StatusCode retVal;
 
-    /* Can't not found in specification for pubsub key generation, so use the idea of
-     * securechannel, see specification 1.0.3 6.7.5 Deriving keys for more details
-     In pubsub we do get have OpenSecureChannel request, so we cannot have Client or Server Nonce*/
     UA_Byte secretBytes[UA_PUBSUB_KEYMATERIAL_NONCELENGTH];
     UA_ByteString secret;
     secret.length = UA_PUBSUB_KEYMATERIAL_NONCELENGTH;
@@ -103,7 +93,7 @@ updateSKSKeyStorage(UA_Server *server, UA_SecurityGroup *sg) {
         ++newKeyID;
 
     if(keyStorage->keyListSize >= keyStorage->maxKeyListSize) {
-        /* reusing the preallocated memory of the oldest key for the new key material */
+        
         UA_PubSubKeyListItem *oldestKey = TAILQ_FIRST(&keyStorage->keyList);
         TAILQ_REMOVE(&keyStorage->keyList, oldestKey, keyListEntry);
         TAILQ_INSERT_TAIL(&keyStorage->keyList, oldestKey, keyListEntry);
@@ -131,7 +121,7 @@ updateSKSKeyStorage(UA_Server *server, UA_SecurityGroup *sg) {
     UA_EventLoop *el = server->config.eventLoop;
     sg->baseTime = el->dateTime_nowMonotonic(el);
 
-    /* We allocated memory for data with allocBuffer so now we free it */
+    
     UA_ByteString_clear(&newKey);
 }
 
@@ -202,7 +192,7 @@ addSecurityGroup(UA_Server *server, UA_NodeId securityGroupFolderNodeId,
     if(!securityGroupConfig)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-    /*check minimal config parameters*/
+    
     if(!securityGroupConfig->keyLifeTime ||
        UA_String_isEmpty(&securityGroupConfig->securityGroupName) ||
        UA_String_isEmpty(&securityGroupConfig->securityPolicyUri))
@@ -324,7 +314,7 @@ removeSecurityGroup(UA_Server *server, UA_SecurityGroup *sg) {
     deleteNode(server, sg->securityGroupNodeId, true);
 #endif
 
-    /* Unlink from the server */
+    
     TAILQ_REMOVE(&server->pubSubManager.securityGroups, sg, listEntry);
     server->pubSubManager.securityGroupsSize--;
     if(sg->callbackId > 0)

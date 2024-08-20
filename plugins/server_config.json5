@@ -12,7 +12,7 @@
   // The applicationType is not just descriptive, it changes the actual functionality of the server.
   // It just sets the value in the information model (https://reference.opcfoundation.org/Core/Part4/v104/docs/7.1).
   applicationDescription: {
-    applicationUri: "urn:open62541.server.application",
+    applicationUri: "urn:opcua.server.application",
     productUri: "urn:product.test.org",
     applicationName: {
       locale: "en-EN",
@@ -33,16 +33,16 @@
 
   // Verify that the server sends a timestamp in the request header.
   //    DEFAULT = 0
-  //    ABORT = 1  /* Abort the operation and return an error code */
-  //    WARN = 2   /* Print a message in the logs and continue */
-  //    ACCEPT = 3 /* Continue and disregard the broken rule */
+  //    ABORT = 1  
+  //    WARN = 2   
+  //    ACCEPT = 3 
   verifyRequestTimestamp: 0,
   // Variables (that don't have a DataType of BaseDataType) must not have an empty variant value.
   // The default behaviour is to auto-create a matching zeroed-out value for empty VariableNodes when they are added.
   //    DEFAULT = 0
-  //    ABORT = 1  /* Abort the operation and return an error code */
-  //    WARN = 2   /* Print a message in the logs and continue */
-  //    ACCEPT = 3 /* Continue and disregard the broken rule */
+  //    ABORT = 1  
+  //    WARN = 2   
+  //    ACCEPT = 3 
   allowEmptyVariables: 0,
 
   // Networking

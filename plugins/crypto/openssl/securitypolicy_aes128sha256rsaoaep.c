@@ -1,12 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2020 (c) Wind River Systems, Inc.
- */
 
-#include <open62541/plugin/securitypolicy_default.h>
-#include <open62541/util.h>
+#include <opcua/plugin/securitypolicy_default.h>
+#include <opcua/util.h>
 
 #if defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL)
 
@@ -19,7 +13,7 @@
 #include <openssl/rand.h>
 #include <openssl/rsa.h>
 
-#define UA_SHA256_LENGTH 32 /* 256 bit */
+#define UA_SHA256_LENGTH 32 
 #define UA_SECURITYPOLICY_AES128SHA256RSAOAEP_RSAPADDING_LEN 42
 #define UA_SECURITYPOLICY_AES128SHA256RSAOAEP_SYM_SIGNING_KEY_LENGTH 32
 #define UA_SECURITYPOLICY_AES128SHA256RSAOAEP_SYM_ENCRYPTION_KEY_LENGTH 16
@@ -45,10 +39,10 @@ typedef struct {
 
     Policy_Context_Aes128Sha256RsaOaep *policyContext;
     UA_ByteString remoteCertificate;
-    X509 *remoteCertificateX509; /* X509 */
+    X509 *remoteCertificateX509; 
 } Channel_Context_Aes128Sha256RsaOaep;
 
-/* create the policy context */
+
 
 static UA_StatusCode
 UA_Policy_Aes128Sha256RsaOaep_New_Context(UA_SecurityPolicy *securityPolicy,
@@ -83,7 +77,7 @@ UA_Policy_Aes128Sha256RsaOaep_New_Context(UA_SecurityPolicy *securityPolicy,
     return UA_STATUSCODE_GOOD;
 }
 
-/* clear the policy context */
+
 
 static void
 UA_Policy_Aes128Sha256RsaOaep_Clear_Context(UA_SecurityPolicy *policy) {
@@ -92,7 +86,7 @@ UA_Policy_Aes128Sha256RsaOaep_Clear_Context(UA_SecurityPolicy *policy) {
 
     UA_ByteString_clear(&policy->localCertificate);
 
-    /* delete all allocated members in the context */
+    
 
     Policy_Context_Aes128Sha256RsaOaep *pc =
         (Policy_Context_Aes128Sha256RsaOaep *)policy->policyContext;
@@ -129,7 +123,7 @@ updateCertificateAndPrivateKey_sp_aes128sha256rsaoaep(UA_SecurityPolicy *securit
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* Set the new private key */
+    
     EVP_PKEY_free(pc->localPrivateKey);
 
     pc->localPrivateKey = UA_OpenSSL_LoadPrivateKey(&newPrivateKey);
@@ -164,7 +158,7 @@ createSigningRequest_sp_aes128sha256rsaoaep(UA_SecurityPolicy *securityPolicy,
                                             const UA_KeyValueMap *params,
                                             UA_ByteString *csr,
                                             UA_ByteString *newPrivateKey) {
-    /* Check parameter */
+    
     if (securityPolicy == NULL || csr == NULL) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
@@ -180,7 +174,7 @@ createSigningRequest_sp_aes128sha256rsaoaep(UA_SecurityPolicy *securityPolicy,
                                            csr, newPrivateKey);
 }
 
-/* create the channel context */
+
 
 static UA_StatusCode
 UA_ChannelModule_Aes128Sha256RsaOaep_New_Context(const UA_SecurityPolicy *securityPolicy,
@@ -210,7 +204,7 @@ UA_ChannelModule_Aes128Sha256RsaOaep_New_Context(const UA_SecurityPolicy *securi
         return retval;
     }
 
-    /* decode to X509 */
+    
     context->remoteCertificateX509 = UA_OpenSSL_LoadCertificate(&context->remoteCertificate);
     if (context->remoteCertificateX509 == NULL) {
         UA_ByteString_clear (&context->remoteCertificate);
@@ -230,7 +224,7 @@ UA_ChannelModule_Aes128Sha256RsaOaep_New_Context(const UA_SecurityPolicy *securi
     return UA_STATUSCODE_GOOD;
 }
 
-/* delete the channel context */
+
 
 static void
 UA_ChannelModule_Aes128Sha256RsaOaep_Delete_Context(void *channelContext) {
@@ -253,9 +247,6 @@ UA_ChannelModule_Aes128Sha256RsaOaep_Delete_Context(void *channelContext) {
     }
 }
 
-/* Verifies the signature of the message using the provided keys in the context.
- * AsymmetricSignatureAlgorithm_RSA-PKCS15-SHA2-256
- */
 
 static UA_StatusCode
 UA_AsySig_Aes128Sha256RsaOaep_Verify(void *channelContext, const UA_ByteString *message,
@@ -272,9 +263,6 @@ UA_AsySig_Aes128Sha256RsaOaep_Verify(void *channelContext, const UA_ByteString *
     return retval;
 }
 
-/* Compares the supplied certificate with the certificate
- * in the endpoint context
- */
 
 static UA_StatusCode
 UA_compareCertificateThumbprint_Aes128Sha256RsaOaep(const UA_SecurityPolicy *securityPolicy,
@@ -289,7 +277,7 @@ UA_compareCertificateThumbprint_Aes128Sha256RsaOaep(const UA_SecurityPolicy *sec
     return UA_STATUSCODE_GOOD;
 }
 
-/* Generates a thumbprint for the specified certificate */
+
 
 static UA_StatusCode
 UA_makeCertificateThumbprint_Aes128Sha256RsaOaep(const UA_SecurityPolicy *securityPolicy,
@@ -379,13 +367,13 @@ UA_Sym_Aes128Sha256RsaOaep_generateNonce(void *policyContext,
 
 static size_t
 UA_SymEn_Aes128Sha256RsaOaep_getLocalKeyLength(const void *channelContext) {
-    /* 32 bytes 256 bits */
+    
     return UA_SECURITYPOLICY_AES128SHA256RSAOAEP_SYM_ENCRYPTION_KEY_LENGTH;
 }
 
 static size_t
 UA_SymSig_Aes128Sha256RsaOaep_getLocalKeyLength(const void *channelContext) {
-    /* 32 bytes 256 bits */
+    
     return UA_SECURITYPOLICY_AES128SHA256RSAOAEP_SYM_SIGNING_KEY_LENGTH;
 }
 
@@ -431,7 +419,7 @@ UA_ChannelM_Aes128Sha256RsaOaep_setLocalSymIv(void *channelContext,
 
 static size_t
 UA_SymEn_Aes128Sha256RsaOaep_getRemoteKeyLength(const void *channelContext) {
-    /* 32 bytes 256 bits */
+    
     return UA_SECURITYPOLICY_AES128SHA256RSAOAEP_SYM_ENCRYPTION_KEY_LENGTH;
 }
 
@@ -442,7 +430,7 @@ UA_SymEn_Aes128Sha256RsaOaep_getBlockSize(const void *channelContext) {
 
 static size_t
 UA_SymSig_Aes128Sha256RsaOaep_getRemoteKeyLength(const void *channelContext) {
-    /* 32 bytes 256 bits */
+    
     return UA_SECURITYPOLICY_AES128SHA256RSAOAEP_SYM_SIGNING_KEY_LENGTH;
 }
 
@@ -577,7 +565,7 @@ UA_AsymEn_Aes128Sha256RsaOaep_getLocalKeyLength(const void *channelContext) {
     return (size_t)keyLen * 8;
 }
 
-/* the main entry of Aes128Sha256RsaOaep */
+
 
 UA_StatusCode
 UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
@@ -602,7 +590,7 @@ UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
     policy->certificateTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_RSASHA256APPLICATIONCERTIFICATETYPE);
     policy->securityLevel = 10;
 
-    /* set ChannelModule context  */
+    
 
     channelModule->newContext = UA_ChannelModule_Aes128Sha256RsaOaep_New_Context;
     channelModule->deleteContext = UA_ChannelModule_Aes128Sha256RsaOaep_Delete_Context;
@@ -619,13 +607,13 @@ UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
     channelModule->compareCertificate =
         UA_ChannelM_Aes128Sha256RsaOaep_compareCertificate;
 
-    /* Copy the certificate and add a NULL to the end */
+    
 
     retval = UA_copyCertificate(&policy->localCertificate, &localCertificate);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* AsymmetricModule - signature algorithm */
+    
 
     UA_SecurityPolicySignatureAlgorithm *asySigAlgorithm =
         &asymmetricModule->cryptoModule.signatureAlgorithm;
@@ -640,7 +628,7 @@ UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
     asySigAlgorithm->getLocalKeyLength = NULL;
     asySigAlgorithm->getRemoteKeyLength = NULL;
 
-    /*  AsymmetricModule encryption algorithm */
+    
 
     UA_SecurityPolicyEncryptionAlgorithm *asymEncryAlg =
         &asymmetricModule->cryptoModule.encryptionAlgorithm;
@@ -653,20 +641,20 @@ UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
     asymEncryAlg->encrypt = UA_AsymEn_Aes128Sha256RsaOaep_encrypt;
     asymEncryAlg->getLocalKeyLength = UA_AsymEn_Aes128Sha256RsaOaep_getLocalKeyLength;
 
-    /* asymmetricModule */
+    
 
     asymmetricModule->compareCertificateThumbprint =
         UA_compareCertificateThumbprint_Aes128Sha256RsaOaep;
     asymmetricModule->makeCertificateThumbprint =
         UA_makeCertificateThumbprint_Aes128Sha256RsaOaep;
 
-    /* SymmetricModule */
+    
 
     symmetricModule->secureChannelNonceLength = 32;
     symmetricModule->generateNonce = UA_Sym_Aes128Sha256RsaOaep_generateNonce;
     symmetricModule->generateKey = UA_Sym_Aes128Sha256RsaOaep_generateKey;
 
-    /* Symmetric encryption Algorithm */
+    
 
     UA_SecurityPolicyEncryptionAlgorithm *symEncryptionAlgorithm =
         &symmetricModule->cryptoModule.encryptionAlgorithm;
@@ -679,7 +667,7 @@ UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
     symEncryptionAlgorithm->decrypt = UA_SymEn_Aes128Sha256RsaOaep_decrypt;
     symEncryptionAlgorithm->encrypt = UA_SymEn_Aes128Sha256RsaOaep_encrypt;
 
-    /* Symmetric signature Algorithm */
+    
 
     UA_SecurityPolicySignatureAlgorithm *symSignatureAlgorithm =
         &symmetricModule->cryptoModule.signatureAlgorithm;
@@ -701,8 +689,6 @@ UA_SecurityPolicy_Aes128Sha256RsaOaep(UA_SecurityPolicy *policy,
     policy->createSigningRequest = createSigningRequest_sp_aes128sha256rsaoaep;
     policy->clear = UA_Policy_Aes128Sha256RsaOaep_Clear_Context;
 
-    /* Use the same signature algorithm as the asymmetric component for
-       certificate signing (see standard) */
 
     policy->certificateSigningAlgorithm =
         policy->asymmetricModule.cryptoModule.signatureAlgorithm;

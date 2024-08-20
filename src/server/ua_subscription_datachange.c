@@ -1,21 +1,11 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2017-2020 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2018 (c) Ari Breitkreuz, fortiss GmbH
- *    Copyright 2018 (c) Thomas Stalder, Blue Time Concept SA
- *    Copyright 2018 (c) Fabian Arndt, Root-Core
- */
 
 #include "ua_server_internal.h"
 #include "ua_subscription.h"
 #include "ua_types_encoding_binary.h"
 
-#ifdef UA_ENABLE_SUBSCRIPTIONS /* conditional compilation */
+#ifdef UA_ENABLE_SUBSCRIPTIONS 
 
-/* Detect value changes outside the deadband */
+
 #define UA_DETECT_DEADBAND(TYPE) do {                           \
     TYPE v1 = *(const TYPE*)data1;                              \
     TYPE v2 = *(const TYPE*)data2;                              \
@@ -47,7 +37,7 @@ detectScalarDeadBand(const void *data1, const void *data2,
     } else if(type->typeKind == UA_DATATYPEKIND_DOUBLE) {
         UA_DETECT_DEADBAND(UA_Double);
     } else {
-        return false; /* Not a known numerical type */
+        return false; 
     }
 }
 
@@ -78,16 +68,16 @@ static UA_Boolean
 detectValueChange(UA_Server *server, UA_MonitoredItem *mon, const UA_DataValue *dv) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Status changes are always reported */
+    
     if(dv->hasStatus != mon->lastValue.hasStatus ||
        dv->status != mon->lastValue.status) {
         return true;
     }
 
-    /* Default trigger is Status + Value */
+    
     UA_DataChangeTrigger trigger = UA_DATACHANGETRIGGER_STATUSVALUE;
 
-    /* Use the configured trigger */
+    
     const UA_DataChangeFilter *dcf = NULL;
     const UA_ExtensionObject *filter = &mon->parameters.filter;
     if(filter->content.decoded.type == &UA_TYPES[UA_TYPES_DATACHANGEFILTER]) {
@@ -95,20 +85,20 @@ detectValueChange(UA_Server *server, UA_MonitoredItem *mon, const UA_DataValue *
         trigger = dcf->trigger;
     }
 
-    /* The status was already tested above */
+    
     if(trigger == UA_DATACHANGETRIGGER_STATUS)
         return false;
 
     UA_assert(trigger == UA_DATACHANGETRIGGER_STATUSVALUE ||
               trigger == UA_DATACHANGETRIGGER_STATUSVALUETIMESTAMP);
 
-    /* Test absolute deadband */
+    
     if(dcf && dcf->deadbandType == UA_DEADBANDTYPE_ABSOLUTE &&
        dv->value.type != NULL && UA_DataType_isNumeric(dv->value.type))
         return detectVariantDeadband(&dv->value, &mon->lastValue.value,
                                      dcf->deadbandValue);
 
-    /* Compare the source timestamp if the trigger requires that */
+    
     if(trigger == UA_DATACHANGETRIGGER_STATUSVALUETIMESTAMP) {
         if(dv->hasSourceTimestamp != mon->lastValue.hasSourceTimestamp)
             return true;
@@ -117,7 +107,7 @@ detectValueChange(UA_Server *server, UA_MonitoredItem *mon, const UA_DataValue *
             return true;
     }
 
-    /* Has the value changed? */
+    
     if(dv->hasValue != mon->lastValue.hasValue)
         return true;
     return !UA_equal(&dv->value, &mon->lastValue.value,
@@ -127,20 +117,20 @@ detectValueChange(UA_Server *server, UA_MonitoredItem *mon, const UA_DataValue *
 UA_StatusCode
 UA_MonitoredItem_createDataChangeNotification(UA_Server *server, UA_MonitoredItem *mon,
                                               const UA_DataValue *dv) {
-    /* Copy the value */
+    
     UA_DataValue valueCopy;
     UA_StatusCode retval = UA_DataValue_copy(dv, &valueCopy);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* Allocate a new notification */
+    
     UA_Notification *n = UA_Notification_new();
     if(!n) {
         UA_DataValue_clear(&valueCopy);
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    /* Prepare and enqueue the notification */
+    
     n->mon = mon;
     n->data.dataChange.value = valueCopy;
     n->data.dataChange.clientHandle = mon->parameters.clientHandle;
@@ -154,7 +144,7 @@ UA_MonitoredItem_processSampledValue(UA_Server *server, UA_MonitoredItem *mon,
     UA_assert(mon->itemToMonitor.attributeId != UA_ATTRIBUTEID_EVENTNOTIFIER);
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Has the value changed (with the filters applied)? */
+    
     UA_Boolean changed = detectValueChange(server, mon, value);
     if(!changed) {
         UA_LOG_DEBUG_SUBSCRIPTION(server->config.logging, mon->subscription,
@@ -164,7 +154,7 @@ UA_MonitoredItem_processSampledValue(UA_Server *server, UA_MonitoredItem *mon,
         return;
     }
 
-    /* Prepare a notification and enqueue it */
+    
     UA_StatusCode res =
         UA_MonitoredItem_createDataChangeNotification(server, mon, value);
     if(res != UA_STATUSCODE_GOOD) {
@@ -176,7 +166,7 @@ UA_MonitoredItem_processSampledValue(UA_Server *server, UA_MonitoredItem *mon,
         return;
     }
 
-    /* Move/store the value for filter comparison and TransferSubscription */
+    
     UA_DataValue_clear(&mon->lastValue);
     mon->lastValue = *value;
 }
@@ -190,15 +180,12 @@ UA_MonitoredItem_sample(UA_Server *server, UA_MonitoredItem *mon) {
     UA_LOG_DEBUG_SUBSCRIPTION(server->config.logging, sub, "MonitoredItem %" PRIi32
                               " | Sample callback called", mon->monitoredItemId);
 
-    /* Sample the current value.
-     * sub->session can be NULL when the subscription is detached. Then
-     * readWithSession returns the error-code BADUSERACCESSDENIED. */
     UA_Session *session = (sub) ? sub->session : &server->adminSession;
     UA_DataValue dv = readWithSession(server, session, &mon->itemToMonitor,
                                       mon->timestampsToReturn);
 
-    /* Process the sample. This always clears the value. */
+    
     UA_MonitoredItem_processSampledValue(server, mon, &dv);
 }
 
-#endif /* UA_ENABLE_SUBSCRIPTIONS */
+#endif 

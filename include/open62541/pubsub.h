@@ -1,36 +1,17 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2017 - 2018 Fraunhofer IOSB (Author: Tino Bischoff)
- * Copyright (c) 2017-2019 Fraunhofer IOSB (Author: Andreas Ebner)
- * Copyright (c) 2024 Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
 #ifndef UA_PUBSUB_H
 #define UA_PUBSUB_H
 
-#include <open62541/common.h>
-#include <open62541/server_pubsub.h>
+#include <opcua/common.h>
+#include <opcua/server_pubsub.h>
 
 _UA_BEGIN_DECLS
 
 #ifdef UA_ENABLE_PUBSUB
 
-/**
- * .. _pubsub-messages:
- *
- * PubSub Network Messages
- * =======================
- *
- * The following definitions enable to work directly with PubSub messages. This
- * is not required when :ref:`PubSub is integrated with a server<pubsub>`. */
 
 #define UA_NETWORKMESSAGE_MAX_NONCE_LENGTH 16
 
-/**
-* DataSet Message
-* ^^^^^^^^^^^^^^^ */
 
 typedef struct {
 	UA_Byte count;
@@ -73,9 +54,9 @@ typedef struct {
 	UA_UInt16 fieldCount;
 	UA_DataValue* dataSetFields;
 	UA_ByteString rawFields;
-	/* Json keys for the dataSetFields: TODO: own dataSetMessageType for json? */
+	
 	UA_String* fieldNames;
-	/* This information is for proper en- and decoding needed */
+	
 	UA_DataSetMetaDataType *dataSetMetaDataType;
 } UA_DataSetMessage_DataKeyFrameData;
 
@@ -98,9 +79,6 @@ typedef struct {
 	size_t configuredSize;
 } UA_DataSetMessage;
 
-/**
- * Network Message
- * ^^^^^^^^^^^^^^^ */
 
 typedef enum {
 	UA_NETWORKMESSAGE_DATASET = 0,
@@ -138,7 +116,7 @@ typedef struct {
 typedef struct {
 	UA_Byte version;
 	UA_Boolean messageIdEnabled;
-	UA_String messageId; /* For Json NetworkMessage */
+	UA_String messageId; 
 	UA_Boolean publisherIdEnabled;
 	UA_Boolean groupHeaderEnabled;
 	UA_Boolean payloadHeaderEnabled;
@@ -161,7 +139,7 @@ typedef struct {
 	UA_DateTime timestamp;
 	UA_UInt16 picoseconds;
 	UA_UInt16 promotedFieldsSize;
-	UA_Variant* promotedFields; /* BaseDataType */
+	UA_Variant* promotedFields; 
 
 	UA_NetworkMessageSecurityHeader securityHeader;
 
@@ -175,12 +153,7 @@ typedef struct {
 UA_EXPORT void
 UA_NetworkMessage_clear(UA_NetworkMessage* p);
 
-/**
- * NetworkMessage Encoding
- * ^^^^^^^^^^^^^^^^^^^^^^^ */
 
-/* The output buffer is allocated to the required size if initially empty.
- * Otherwise, upon success, the length is adjusted. */
 UA_EXPORT UA_StatusCode
 UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src,
                                UA_ByteString *outBuf);
@@ -188,7 +161,7 @@ UA_NetworkMessage_encodeBinary(const UA_NetworkMessage* src,
 UA_EXPORT size_t
 UA_NetworkMessage_calcSizeBinary(const UA_NetworkMessage *p);
 
-/* The customTypes can be NULL */
+
 UA_EXPORT UA_StatusCode
 UA_NetworkMessage_decodeBinary(const UA_ByteString *src,
                                UA_NetworkMessage* dst,
@@ -196,20 +169,17 @@ UA_NetworkMessage_decodeBinary(const UA_ByteString *src,
 
 #ifdef UA_ENABLE_JSON_ENCODING
 
-/* The output buffer is allocated to the required size if initially empty.
- * Otherwise, upon success, the length is adjusted.
- * The encoding options can be NULL. */
 UA_EXPORT UA_StatusCode
 UA_NetworkMessage_encodeJson(const UA_NetworkMessage *src,
                              UA_ByteString *outBuf,
                              const UA_EncodeJsonOptions *options);
 
-/* The encoding options can be NULL */
+
 UA_EXPORT size_t
 UA_NetworkMessage_calcSizeJson(const UA_NetworkMessage *src,
                                const UA_EncodeJsonOptions *options);
 
-/* The encoding options can be NULL */
+
 UA_EXPORT UA_StatusCode
 UA_NetworkMessage_decodeJson(const UA_ByteString *src,
                              UA_NetworkMessage *dst,
@@ -217,8 +187,8 @@ UA_NetworkMessage_decodeJson(const UA_ByteString *src,
 
 #endif
 
-#endif /* UA_ENABLE_PUBSUB */
+#endif 
 
 _UA_END_DECLS
 
-#endif /* UA_PUBSUB_H */
+#endif 

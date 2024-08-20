@@ -66,7 +66,7 @@ try {
         exit $LASTEXITCODE
     }
     cd ..
-    & 7z a -tzip open62541-$env:CC_SHORTNAME-static.zip "$env:APPVEYOR_BUILD_FOLDER\pack\*" "$env:APPVEYOR_BUILD_FOLDER-$env:CC_SHORTNAME-static\*"
+    & 7z a -tzip opcua-$env:CC_SHORTNAME-static.zip "$env:APPVEYOR_BUILD_FOLDER\pack\*" "$env:APPVEYOR_BUILD_FOLDER-$env:CC_SHORTNAME-static\*"
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0)
     {
         Write-Host -ForegroundColor Red "`n`n*** Zipping failed. Exiting ... ***"
@@ -91,7 +91,7 @@ try {
         exit $LASTEXITCODE
     }
     cd ..
-    & 7z a -tzip open62541-$env:CC_SHORTNAME-dynamic.zip "$env:APPVEYOR_BUILD_FOLDER\pack\*" "$env:APPVEYOR_BUILD_FOLDER-$env:CC_SHORTNAME-static\*"
+    & 7z a -tzip opcua-$env:CC_SHORTNAME-dynamic.zip "$env:APPVEYOR_BUILD_FOLDER\pack\*" "$env:APPVEYOR_BUILD_FOLDER-$env:CC_SHORTNAME-static\*"
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0)
     {
         Write-Host -ForegroundColor Red "`n`n*** Zipping failed. Exiting ... ***"

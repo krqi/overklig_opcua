@@ -1,4 +1,4 @@
-# open62541 Architecture Support
+# opcua Architecture Support
 
 This folder contains all the architecture-specific code for different operating
 systems. The arch-specific functionality covers:
@@ -6,7 +6,7 @@ systems. The arch-specific functionality covers:
 - System clock
 - EventLoop (Networking, Timed events, Interrupt handling (optional))
 
-Currently open62541 supports the architectures
+Currently opcua supports the architectures
 
 - POSIX (Linux, BSD, Mac, etc.)
 - Windows
@@ -23,10 +23,10 @@ coverage to the CI.
 
 ## Adding new architectures
 
-To port open62541 to a new architecture, follow these steps:
+To port opcua to a new architecture, follow these steps:
 
 1. Modify clock.c file that implements the following functions defined in
-   open62541/types.h:
+   opcua/types.h:
 
    - UA_DateTime UA_DateTime_now(void);
    
@@ -44,6 +44,6 @@ final binary. To prevent the parallel build of Win32/POSIX versions, set
 UA_ARCHITECTURE=none in the cmake setting. To use CMake for the entire build,
 including a new architecture, do the following:
 
-- Add your architecture to the list in /include/open62541/config.h.in
+- Add your architecture to the list in /include/opcua/config.h.in
 
 - Add the architecture and the new files to /CMakeLists.txt

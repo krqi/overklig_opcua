@@ -1,21 +1,10 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2017-2019 Fraunhofer IOSB (Author: Andreas Ebner)
- * Copyright (c) 2019 Fraunhofer IOSB (Author: Julius Pfrommer)
- * Copyright (c) 2019-2021 Kalycito Infotech Private Limited
- * Copyright (c) 2020 Yannick Wallerer, Siemens AG
- * Copyright (c) 2020 Thomas Fischer, Siemens AG
- * Copyright (c) 2021 Fraunhofer IOSB (Author: Jan Hermes)
- */
 
-#include "open62541/plugin/eventloop.h"
+#include "opcua/plugin/eventloop.h"
 #include "ua_pubsub.h"
 #include "ua_pubsub_ns0.h"
 #include "server/ua_server_internal.h"
 
-#ifdef UA_ENABLE_PUBSUB /* conditional compilation */
+#ifdef UA_ENABLE_PUBSUB 
 
 static void
 UA_DataSetField_clear(UA_DataSetField *field) {
@@ -149,10 +138,6 @@ void
 UA_PublishedDataSet_clear(UA_Server *server, UA_PublishedDataSet *publishedDataSet) {
     UA_DataSetField *field, *tmpField;
     TAILQ_FOREACH_SAFE(field, &publishedDataSet->fields, listEntry, tmpField) {
-        /* Code in this block is a duplication of similar code in UA_DataSetField_remove, but
-         * this is intentional. We don't want to call UA_DataSetField_remove here as that
-         * function regenerates DataSetMetaData, which is not necessary if we want to
-         * clear the whole PDS anyway. */
         if(field->configurationFrozen) {
             UA_LOG_WARNING_PUBSUB(server->config.logging, publishedDataSet,
                                   "Clearing a frozen field.");
@@ -171,26 +156,24 @@ UA_PublishedDataSet_clear(UA_Server *server, UA_PublishedDataSet *publishedDataS
     UA_PubSubComponentHead_clear(&publishedDataSet->head);
 }
 
-/* The fieldMetaData variable has to be cleaned up external in case of an error */
+
 static UA_StatusCode
 generateFieldMetaData(UA_Server *server, UA_PublishedDataSet *pds,
                       UA_DataSetField *field, UA_FieldMetaData *fieldMetaData) {
     if(field->config.dataSetFieldType != UA_PUBSUB_DATASETFIELD_VARIABLE)
         return UA_STATUSCODE_BADNOTSUPPORTED;
 
-    /* Set the field identifier */
+    
     fieldMetaData->dataSetFieldId = UA_PubSubManager_generateUniqueGuid(server);
 
-    /* Set the description */
+    
     fieldMetaData->description = UA_LOCALIZEDTEXT_ALLOC("", "");
 
-    /* Set the name */
+    
     const UA_DataSetVariableConfig *var = &field->config.field.variable;
     UA_StatusCode res = UA_String_copy(&var->fieldNameAlias, &fieldMetaData->name);
     UA_CHECK_STATUS(res, return res);
 
-    /* Static value source. ToDo after freeze PR, the value source must be
-     * checked (other behavior for static value source) */
     if(var->rtValueSource.rtFieldSourceEnabled &&
        !var->rtValueSource.rtInformationModelNode) {
         const UA_DataValue *svs = *var->rtValueSource.staticValueSource;
@@ -215,7 +198,7 @@ generateFieldMetaData(UA_Server *server, UA_PublishedDataSet *pds,
         return UA_STATUSCODE_GOOD;
     }
 
-    /* Set the Array Dimensions */
+    
     const UA_PublishedVariableDataType *pp = &var->publishParameters;
     UA_Variant value;
     UA_Variant_init(&value);
@@ -239,7 +222,7 @@ generateFieldMetaData(UA_Server *server, UA_PublishedDataSet *pds,
 
     UA_Variant_clear(&value);
 
-    /* Set the DataType */
+    
     res = readWithReadValue(server, &pp->publishedVariable,
                             UA_ATTRIBUTEID_DATATYPE, &fieldMetaData->dataType);
     if(res != UA_STATUSCODE_GOOD) {
@@ -257,10 +240,10 @@ generateFieldMetaData(UA_Server *server, UA_PublishedDataSet *pds,
                             "MetaData creation: Found DataType %s",
                             currentDataType->typeName);
 #endif
-        /* Check if the datatype is a builtInType, if yes set the builtinType. */
+        
         if(currentDataType->typeKind <= UA_DATATYPEKIND_ENUM)
             fieldMetaData->builtInType = (UA_Byte)currentDataType->typeId.identifier.numeric;
-        /* set the maxStringLength attribute */
+        
         if(field->config.field.variable.maxStringLength != 0){
             if(currentDataType->typeKind == UA_DATATYPEKIND_BYTESTRING ||
             currentDataType->typeKind == UA_DATATYPEKIND_STRING ||
@@ -276,7 +259,7 @@ generateFieldMetaData(UA_Server *server, UA_PublishedDataSet *pds,
                               "PubSub meta data generation: DataType is UA_NODEID_NULL");
     }
 
-    /* Set the ValueRank */
+    
     UA_Int32 valueRank;
     res = readWithReadValue(server, &pp->publishedVariable,
                             UA_ATTRIBUTEID_VALUERANK, &valueRank);
@@ -287,13 +270,13 @@ generateFieldMetaData(UA_Server *server, UA_PublishedDataSet *pds,
     }
     fieldMetaData->valueRank = valueRank;
 
-    /* PromotedField? */
+    
     if(var->promotedField)
         fieldMetaData->fieldFlags = UA_DATASETFIELDFLAGS_PROMOTEDFIELD;
     else
         fieldMetaData->fieldFlags = UA_DATASETFIELDFLAGS_NONE;
 
-    /* Properties */
+    
     fieldMetaData->properties = NULL;
     fieldMetaData->propertiesSize = 0;
 
@@ -353,7 +336,7 @@ UA_DataSetField_create(UA_Server *server, const UA_NodeId publishedDataSet,
         return result;
     }
 
-    /* Initialize the field metadata. Also generates a FieldId */
+    
     UA_FieldMetaData fmd;
     UA_FieldMetaData_init(&fmd);
     result.result = generateFieldMetaData(server, currDS, newField, &fmd);
@@ -365,7 +348,7 @@ UA_DataSetField_create(UA_Server *server, const UA_NodeId publishedDataSet,
         return result;
     }
 
-    /* Append to the metadata fields array. Point of last return. */
+    
     result.result = UA_Array_appendCopy((void**)&currDS->dataSetMetaData.fields,
                                     &currDS->dataSetMetaData.fieldsSize,
                                     &fmd, &UA_TYPES[UA_TYPES_FIELDMETADATA]);
@@ -377,30 +360,25 @@ UA_DataSetField_create(UA_Server *server, const UA_NodeId publishedDataSet,
         return result;
     }
 
-    /* Copy the identifier from the metadata. Cannot fail with a guid NodeId. */
+    
     newField->identifier = UA_NODEID_GUID(1, fmd.dataSetFieldId);
     if(fieldIdentifier)
         UA_NodeId_copy(&newField->identifier, fieldIdentifier);
     UA_FieldMetaData_clear(&fmd);
 
-    /* Register the field. The order of DataSetFields should be the same in both
-     * creating and publishing. So adding DataSetFields at the the end of the
-     * DataSets using the TAILQ structure. */
     TAILQ_INSERT_TAIL(&currDS->fields, newField, listEntry);
     currDS->fieldSize++;
 
     if(newField->config.field.variable.promotedField)
         currDS->promotedFieldsCount++;
 
-    /* The values of the metadata are "borrowed" in a mirrored structure in the
-     * pds. Reset them after resizing the array. */
     size_t counter = 0;
     UA_DataSetField *dsf;
     TAILQ_FOREACH(dsf, &currDS->fields, listEntry) {
         dsf->fieldMetaData = currDS->dataSetMetaData.fields[counter++];
     }
 
-    /* Update major version of parent published data set */
+    
     UA_EventLoop *el = server->config.eventLoop;
     currDS->dataSetMetaData.configurationVersion.majorVersion =
         UA_PubSubConfigurationVersionTimeDifference(el->dateTime_now(el));
@@ -449,17 +427,17 @@ UA_DataSetField_remove(UA_Server *server, UA_DataSetField *currentField) {
         return result;
     }
 
-    /* Reduce the counters before the config is cleaned up */
+    
     if(currentField->config.field.variable.promotedField)
         pds->promotedFieldsCount--;
     pds->fieldSize--;
 
-    /* Update major version of PublishedDataSet */
+    
     UA_EventLoop *el = server->config.eventLoop;
     pds->dataSetMetaData.configurationVersion.majorVersion =
         UA_PubSubConfigurationVersionTimeDifference(el->dateTime_now(el));
 
-    /* Clean up */
+    
     currentField->fieldMetaData.arrayDimensions = NULL;
     currentField->fieldMetaData.properties = NULL;
     currentField->fieldMetaData.name = UA_STRING_NULL;
@@ -467,11 +445,11 @@ UA_DataSetField_remove(UA_Server *server, UA_DataSetField *currentField) {
     currentField->fieldMetaData.description.text = UA_STRING_NULL;
     UA_DataSetField_clear(currentField);
 
-    /* Remove */
+    
     TAILQ_REMOVE(&pds->fields, currentField, listEntry);
     UA_free(currentField);
 
-    /* Regenerate DataSetMetaData */
+    
     pds->dataSetMetaData.fieldsSize--;
     if(pds->dataSetMetaData.fieldsSize > 0) {
         for(size_t i = 0; i < pds->dataSetMetaData.fieldsSize+1; i++) {
@@ -495,7 +473,7 @@ UA_DataSetField_remove(UA_Server *server, UA_DataSetField *currentField) {
                                       "after removing a field!");
                 break;
             }
-            /* The contents of the metadata is shared between the PDS and its fields */
+            
             tmpDSF->fieldMetaData = fieldMetaData[counter++];
         }
         pds->dataSetMetaData.fields = fieldMetaData;
@@ -578,14 +556,12 @@ UA_DataSetFieldConfig_clear(UA_DataSetFieldConfig *dataSetFieldConfig) {
     }
 }
 
-/* Obtain the latest value for a specific DataSetField. This method is currently
- * called inside the DataSetMessage generation process. */
 void
 UA_PubSubDataSetField_sampleValue(UA_Server *server, UA_DataSetField *field,
                                   UA_DataValue *value) {
     UA_PublishedVariableDataType *params = &field->config.field.variable.publishParameters;
 
-    /* Read the value */
+    
     if(field->config.field.variable.rtValueSource.rtInformationModelNode) {
         const UA_VariableNode *rtNode = (const UA_VariableNode *)
             UA_NODESTORE_GET(server, &params->publishedVariable);
@@ -640,7 +616,7 @@ UA_PublishedDataSet_create(UA_Server *server,
         return result;
     }
 
-    /* Create new PDS and add to UA_PubSubManager */
+    
     UA_PublishedDataSet *newPDS = (UA_PublishedDataSet *)
         UA_calloc(1, sizeof(UA_PublishedDataSet));
     if(!newPDS) {
@@ -655,7 +631,7 @@ UA_PublishedDataSet_create(UA_Server *server,
 
     UA_PublishedDataSetConfig *newConfig = &newPDS->config;
 
-    /* Deep copy the given connection config */
+    
     UA_StatusCode res = UA_PublishedDataSetConfig_copy(publishedDataSetConfig, newConfig);
     if(res != UA_STATUSCODE_GOOD){
         UA_free(newPDS);
@@ -665,11 +641,11 @@ UA_PublishedDataSet_create(UA_Server *server,
         return result;
     }
 
-    /* TODO: Parse template config and add fields (later PubSub batch) */
+    
     if(newConfig->publishedDataSetType == UA_PUBSUB_DATASET_PUBLISHEDITEMS_TEMPLATE) {
     }
 
-    /* Fill the DataSetMetaData */
+    
     UA_EventLoop *el = server->config.eventLoop;
     result.configurationVersion.majorVersion =
         UA_PubSubConfigurationVersionTimeDifference(el->dateTime_now(el));
@@ -699,7 +675,7 @@ UA_PublishedDataSet_create(UA_Server *server,
         res = UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Abort? */
+    
     result.addResult = res;
     if(result.addResult != UA_STATUSCODE_GOOD) {
         UA_PublishedDataSetConfig_clear(newConfig);
@@ -707,26 +683,26 @@ UA_PublishedDataSet_create(UA_Server *server,
         return result;
     }
 
-    /* Insert into the queue of the manager */
+    
     TAILQ_INSERT_TAIL(&server->pubSubManager.publishedDataSets, newPDS, listEntry);
     server->pubSubManager.publishedDataSetsSize++;
 
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
-    /* Create representation and unique id */
+    
     addPublishedDataItemsRepresentation(server, newPDS);
 #else
-    /* Generate unique nodeId */
+    
     UA_PubSubManager_generateUniqueNodeId(&server->pubSubManager, &newPDS->identifier);
 #endif
 
-    /* Cache the log string */
+    
     char tmpLogIdStr[128];
     mp_snprintf(tmpLogIdStr, 128, "PublishedDataset %N\t| ", newPDS->head.identifier);
     newPDS->head.logIdString = UA_STRING_ALLOC(tmpLogIdStr);
 
     UA_LOG_INFO_PUBSUB(server->config.logging, newPDS, "DataSet created");
 
-    /* Return the created identifier */
+    
     if(pdsIdentifier)
         UA_NodeId_copy(&newPDS->head.identifier, pdsIdentifier);
     return result;
@@ -751,8 +727,6 @@ UA_PublishedDataSet_remove(UA_Server *server, UA_PublishedDataSet *publishedData
         return UA_STATUSCODE_BADCONFIGURATIONERROR;
     }
 
-    /* Search for referenced writers -> delete this writers. (Standard: writer
-     * must be connected with PDS) */
     UA_PubSubConnection *conn;
     TAILQ_FOREACH(conn, &server->pubSubManager.connections, listEntry) {
         UA_WriterGroup *wg;
@@ -865,7 +839,7 @@ addStandaloneSubscribedDataSet(UA_Server *server,
         return res;
     }
 
-    /* Create new PDS and add to UA_PubSubManager */
+    
     UA_StandaloneSubscribedDataSet *newSubscribedDataSet = (UA_StandaloneSubscribedDataSet *)
             UA_calloc(1, sizeof(UA_StandaloneSubscribedDataSet));
     if(!newSubscribedDataSet) {
@@ -910,15 +884,13 @@ void
 UA_StandaloneSubscribedDataSet_remove(UA_Server *server, UA_StandaloneSubscribedDataSet *sds) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Search for referenced readers */
+    
     UA_PubSubConnection *conn;
     TAILQ_FOREACH(conn, &server->pubSubManager.connections, listEntry) {
         UA_ReaderGroup *rg;
         LIST_FOREACH(rg, &conn->readerGroups, listEntry) {
             UA_DataSetReader *dsr, *tmpReader;
             LIST_FOREACH_SAFE(dsr, &rg->readers, listEntry, tmpReader) {
-                /* TODO: What if the reader is still operational?
-                 * This should be checked before calling _remove. */
                 if(dsr == sds->connectedReader)
                     UA_DataSetReader_remove(server, dsr);
             }
@@ -949,4 +921,4 @@ UA_Server_removeStandaloneSubscribedDataSet(UA_Server *server, const UA_NodeId s
     return res;
 }
 
-#endif /* UA_ENABLE_PUBSUB */
+#endif 

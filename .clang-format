@@ -26,10 +26,10 @@ IncludeBlocks: Regroup
 # The first regex which matches is the resulting priority
 # We want something like this:
 
-#include <open62541/client_subscriptions.h>
-#include <open62541/client_highlevel.h>
-#include <open62541/client_config_default.h>
-#include <open62541/plugin/log_stdout.h>
+#include <opcua/client_subscriptions.h>
+#include <opcua/client_highlevel.h>
+#include <opcua/client_config_default.h>
+#include <opcua/plugin/log_stdout.h>
 
 #include "server/ua_server_internal.h"
 #include "ua_network_tcp.h"
@@ -43,16 +43,16 @@ IncludeBlocks: Regroup
 #include "thread_wrapper.h"
 
 IncludeCategories:
-    # Public open62541 includes starting with <open62541/
-  - Regex:           '^(<(open62541)\/)'
+    # Public opcua includes starting with <opcua/
+  - Regex:           '^(<(opcua)\/)'
     Priority:        10
 
-    # Public open62541 includes starting with "open62541/
-  - Regex:           '^("(open62541)\/)'
+    # Public opcua includes starting with "opcua/
+  - Regex:           '^("(opcua)\/)'
     Priority:        20
 
-    # Internal open62541 includes starting with "ua_" or "open62541_"
-  - Regex:           '^((<|")(([[:alnum:]]+\/)?ua_|open62541_))'
+    # Internal opcua includes starting with "ua_" or "opcua_"
+  - Regex:           '^((<|")(([[:alnum:]]+\/)?ua_|opcua_))'
     Priority:        30
 
     # All other system header

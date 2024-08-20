@@ -1,38 +1,13 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 #ifndef UA_CLIENT_SUBSCRIPTIONS_H_
 #define UA_CLIENT_SUBSCRIPTIONS_H_
 
-#include <open62541/client.h>
+#include <opcua/client.h>
 
 _UA_BEGIN_DECLS
 
-/**
- * .. _client-subscriptions:
- *
- * Subscriptions
- * -------------
- *
- * Subscriptions in OPC UA are asynchronous. That is, the client sends several
- * PublishRequests to the server. The server returns PublishResponses with
- * notifications. But only when a notification has been generated. The client
- * does not wait for the responses and continues normal operations.
- *
- * Note the difference between Subscriptions and MonitoredItems. Subscriptions
- * are used to report back notifications. MonitoredItems are used to generate
- * notifications. Every MonitoredItem is attached to exactly one Subscription.
- * And a Subscription can contain many MonitoredItems.
- *
- * The client automatically processes PublishResponses (with a callback) in the
- * background and keeps enough PublishRequests in transit. The PublishResponses
- * may be recieved during a synchronous service call or in
- * ``UA_Client_run_iterate``. See more about
- * :ref:`asynchronicity<client-async-services>`.
- */
 
-/* Callbacks defined for Subscriptions */
+
 typedef void (*UA_Client_DeleteSubscriptionCallback)
     (UA_Client *client, UA_UInt32 subId, void *subContext);
 
@@ -40,14 +15,6 @@ typedef void (*UA_Client_StatusChangeNotificationCallback)
     (UA_Client *client, UA_UInt32 subId, void *subContext,
      UA_StatusChangeNotification *notification);
 
-/* Provides default values for a new subscription.
- *
- * RequestedPublishingInterval:  500.0 [ms]
- * RequestedLifetimeCount: 10000
- * RequestedMaxKeepAliveCount: 10
- * MaxNotificationsPerPublish: 0 (unlimited)
- * PublishingEnabled: true
- * Priority: 0 */
 static UA_INLINE UA_CreateSubscriptionRequest
 UA_CreateSubscriptionRequest_default(void) {
     UA_CreateSubscriptionRequest request;
@@ -98,7 +65,7 @@ UA_Client_Subscriptions_delete_async(UA_Client *client,
     UA_ClientAsyncServiceCallback callback,
     void *userdata, UA_UInt32 *requestId);
 
-/* Delete a single subscription */
+
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 UA_Client_Subscriptions_deleteSingle(UA_Client *client, UA_UInt32 subscriptionId);
 
@@ -112,19 +79,8 @@ UA_Client_Subscriptions_setPublishingMode(UA_Client *client,
     return response;
 }
 
-/**
- * MonitoredItems
- * --------------
- *
- * MonitoredItems for Events indicate the ``EventNotifier`` attribute. This
- * indicates to the server not to monitor changes of the attribute, but to
- * forward Event notifications from that node.
- *
- * During the creation of a MonitoredItem, the server may return changed
- * adjusted parameters. Check the returned ``UA_CreateMonitoredItemsResponse``
- * to get the current parameters. */
 
-/* Provides default values for a new monitored item. */
+
 static UA_INLINE UA_MonitoredItemCreateRequest
 UA_MonitoredItemCreateRequest_default(UA_NodeId nodeId) {
     UA_MonitoredItemCreateRequest request;
@@ -138,28 +94,25 @@ UA_MonitoredItemCreateRequest_default(UA_NodeId nodeId) {
     return request;
 }
 
-/**
- * The clientHandle parameter cannot be set by the user, any value will be replaced
- * by the client before sending the request to the server. */
 
-/* Callback for the deletion of a MonitoredItem */
+
 typedef void (*UA_Client_DeleteMonitoredItemCallback)
     (UA_Client *client, UA_UInt32 subId, void *subContext,
      UA_UInt32 monId, void *monContext);
 
-/* Callback for DataChange notifications */
+
 typedef void (*UA_Client_DataChangeNotificationCallback)
     (UA_Client *client, UA_UInt32 subId, void *subContext,
      UA_UInt32 monId, void *monContext,
      UA_DataValue *value);
 
-/* Callback for Event notifications */
+
 typedef void (*UA_Client_EventNotificationCallback)
     (UA_Client *client, UA_UInt32 subId, void *subContext,
      UA_UInt32 monId, void *monContext,
      size_t nEventFields, UA_Variant *eventFields);
 
-/* Don't use to monitor the EventNotifier attribute */
+
 UA_CreateMonitoredItemsResponse UA_EXPORT UA_THREADSAFE
 UA_Client_MonitoredItems_createDataChanges(UA_Client *client,
     const UA_CreateMonitoredItemsRequest request, void **contexts,
@@ -182,14 +135,14 @@ UA_Client_MonitoredItems_createDataChange(UA_Client *client,
     void *context, UA_Client_DataChangeNotificationCallback callback,
     UA_Client_DeleteMonitoredItemCallback deleteCallback);
 
-/* Monitor the EventNotifier attribute only */
+
 UA_CreateMonitoredItemsResponse UA_EXPORT UA_THREADSAFE
 UA_Client_MonitoredItems_createEvents(UA_Client *client,
     const UA_CreateMonitoredItemsRequest request, void **contexts,
     UA_Client_EventNotificationCallback *callback,
     UA_Client_DeleteMonitoredItemCallback *deleteCallback);
 
-/* Monitor the EventNotifier attribute only */
+
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 UA_Client_MonitoredItems_createEvents_async(UA_Client *client,
     const UA_CreateMonitoredItemsRequest request, void **contexts,
@@ -220,7 +173,7 @@ UA_StatusCode UA_EXPORT UA_THREADSAFE
 UA_Client_MonitoredItems_deleteSingle(UA_Client *client,
     UA_UInt32 subscriptionId, UA_UInt32 monitoredItemId);
 
-/* The clientHandle parameter will be filled automatically */
+
 UA_ModifyMonitoredItemsResponse UA_EXPORT UA_THREADSAFE
 UA_Client_MonitoredItems_modify(UA_Client *client,
     const UA_ModifyMonitoredItemsRequest request);
@@ -231,9 +184,6 @@ UA_Client_MonitoredItems_modify_async(UA_Client *client,
     UA_ClientAsyncServiceCallback callback,
     void *userdata, UA_UInt32 *requestId);
 
-/**
- * The following service calls go directly to the server. The MonitoredItem
- * settings are not stored in the client. */
 
 static UA_INLINE UA_THREADSAFE UA_SetMonitoringModeResponse
 UA_Client_MonitoredItems_setMonitoringMode(UA_Client *client,
@@ -279,4 +229,4 @@ UA_Client_MonitoredItems_setTriggering_async(UA_Client *client,
 
 _UA_END_DECLS
 
-#endif /* UA_CLIENT_SUBSCRIPTIONS_H_ */
+#endif 

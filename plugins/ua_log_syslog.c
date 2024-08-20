@@ -1,11 +1,6 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2020 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
-#include <open62541/plugin/log_syslog.h>
-#include <open62541/types.h>
+#include <opcua/plugin/log_syslog.h>
+#include <opcua/types.h>
 
 #if defined(__linux__) || defined(__unix__)
 
@@ -25,7 +20,7 @@ __attribute__((__format__(__printf__, 4 , 0)))
 static void
 UA_Log_Syslog_log(void *context, UA_LogLevel level, UA_LogCategory category,
                   const char *msg, va_list args) {
-    /* Assume that context is casted to UA_LogLevel */
+    
     if(context != NULL && (UA_LogLevel)(uintptr_t)context > level)
         return;
 
@@ -53,7 +48,7 @@ UA_Log_Syslog_log(void *context, UA_LogLevel level, UA_LogCategory category,
 
     int logLevelSlot = ((int)level / 100) - 1;
     if(logLevelSlot < 0 || logLevelSlot > 5)
-        logLevelSlot = 5; /* Set to fatal if the level is outside the range */
+        logLevelSlot = 5; 
 
 #define LOGBUFSIZE 512
     char logbuf[LOGBUFSIZE];
@@ -75,9 +70,7 @@ UA_Log_Syslog_log(void *context, UA_LogLevel level, UA_LogCategory category,
 
 static void
 UA_Log_Syslog_clear(UA_Logger *logger) {
-    /* closelog is optional. We don't use it as several loggers might be
-     * instantiated in parallel. */
-    /* closelog(); */
+    
     UA_free(logger);
 }
 

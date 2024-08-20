@@ -1,4 +1,4 @@
-# open62541 Third-Party libraries
+# opcua Third-Party libraries
 
 Specific optional features are dependent on third-party libraries.
 Any third-party library which may be used is inside this `/deps` folder.
@@ -15,7 +15,7 @@ The following third party libraries may be included -- depending on the activate
 | parse_num       | MIT              | Char to int conversion, from musl               |
 | base64          | BSD              | Base64 encoding and decoding                    |
 | itoa            | MIT              | Int to char conversion                          |
-| open62541_queue | BSD-3-Clause     | FIFO and LIFO queue implementation              |
+| opcua_queue | BSD-3-Clause     | FIFO and LIFO queue implementation              |
 | pcg_basic       | Apache License 2 | Random Number Generation                        |
 | ziptree         | MPL 2.0          | Reusable zip tree implementation                |
 | mqtt-c          | MIT              | a portable MQTT client in C                     |

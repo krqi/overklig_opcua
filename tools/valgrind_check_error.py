@@ -49,7 +49,7 @@ if len(log_content) == 0:
     exit(1)
 
 # Remove output of possible bug in OSX
-# --16672-- run: /usr/bin/dsymutil "/Users/travis/build/Pro/open62541/build/bin/tests/check_utils"
+# --16672-- run: /usr/bin/dsymutil "/Users/travis/build/Pro/opcua/build/bin/tests/check_utils"
 # --16672-- WARNING: unhandled amd64-darwin syscall: unix:464
 # --16672-- You may be able to write your own handler.
 # --16672-- Read the file README_MISSING_SYSCALL_OR_IOCTL.
@@ -74,7 +74,7 @@ valgrind_number = m.group(1)
 open_count = int(m.group(2))
 
 # Remove the open file descriptors which are inherited from parent. they look like this:
-#==21343== Open file descriptor 3: /home/user/open62541/build/bin/tests/discovery.log
+#==21343== Open file descriptor 3: /home/user/opcua/build/bin/tests/discovery.log
 #==21343==    <inherited from parent>
 #==21343==
 #==21343== Open file descriptor 2:

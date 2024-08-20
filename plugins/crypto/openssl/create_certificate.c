@@ -1,13 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2021 (c) Christian von Arnim, ISW University of Stuttgart (for VDW and umati)
- *    Copyright 2022 (c) Wind River Systems, Inc.
- *
- */
 
-#include <open62541/plugin/create_certificate.h>
+#include <opcua/plugin/create_certificate.h>
 
 #include "securitypolicy_common.h"
 
@@ -17,10 +9,6 @@
 #include <openssl/x509v3.h>
 #include <openssl/err.h>
 
-/**
- * Join an array of UA_String to a single NULL-Terminated UA_String
- * separated by character sep
- */
 static UA_StatusCode
 join_string_with_sep(const UA_String *strings, size_t stringsSize,
                      char sep, UA_String *out) {
@@ -50,12 +38,6 @@ join_string_with_sep(const UA_String *strings, size_t stringsSize,
     return UA_STATUSCODE_GOOD;
 }
 
-/**
- * Search for a character in a string (like strchr).
- * \todo Handle UTF-8
- *
- * \return index of the character or -1 on case of an error.
- */
 
 static UA_Int32
 UA_String_chr(const UA_String *pUaStr, char needl) {
@@ -68,7 +50,7 @@ UA_String_chr(const UA_String *pUaStr, char needl) {
     return -1;
 }
 
-/* char *value cannot be const due to openssl 1.0 compatibility */
+
 static UA_StatusCode
 add_x509V3ext(const UA_Logger *logger, X509 *x509, int nid, char *value) {
     X509_EXTENSION *ex;
@@ -96,7 +78,7 @@ add_x509V3ext(const UA_Logger *logger, X509 *x509, int nid, char *value) {
 
 #if (OPENSSL_VERSION_NUMBER >= 0x30000000L)
 
-/* generate the RSA key */
+
 
 static EVP_PKEY * UA_RSA_Generate_Key (size_t keySizeBits){
     return EVP_RSA_gen(keySizeBits);
@@ -115,9 +97,9 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
        (certFormat != UA_CERTIFICATEFORMAT_DER && certFormat != UA_CERTIFICATEFORMAT_PEM))
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-    /* Use the maximum size */
+    
     UA_UInt16 keySizeBits = 4096;
-    /* Default to 1 year */
+    
     UA_UInt16 expiresInDays = 365;
 
     if(params) {
@@ -138,8 +120,6 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
     UA_String fullAltSubj = UA_STRING_NULL;
     UA_Int32 serial = 1;
 
-    /** \TODO: Seed Random generator
-    * See: (https://www.openssl.org/docs/man1.1.0/man3/RAND_add.html) */
     BIO *memCert = NULL;
     BIO *memPKey = NULL;
 
@@ -185,13 +165,11 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
         errRet = UA_STATUSCODE_BADINTERNALERROR;
         goto cleanup;
     }
-    /* rsa will be freed by pkey */
+    
     rsa = NULL;
 
-#endif  /* end of OPENSSL_VERSION_NUMBER >= 0x30000000L */
+#endif  
 
-    /* x509v3 has version 2
-     * (https://www.openssl.org/docs/man1.1.0/man3/X509_set_version.html) */
     if(X509_set_version(x509, 2) != 1) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
                      "Create Certificate: Setting version failed.");
@@ -202,7 +180,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
     if(ASN1_INTEGER_set(X509_get_serialNumber(x509), serial) != 1) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
                      "Create Certificate: Setting serial number failed.");
-        /* Only memory errors are possible */
+        
         errRet = UA_STATUSCODE_BADOUTOFMEMORY;
         goto cleanup;
     }
@@ -261,7 +239,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
             goto cleanup;
         }
     }
-    /* Self signed, so issuer == subject */
+    
     if(X509_set_issuer_name(x509, name) != 1) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
                      "Create Certificate: Setting name failed.");
@@ -276,8 +254,6 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
         goto cleanup;
     }
 
-    /* See https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.3 for
-     * possible values */
     errRet = add_x509V3ext(logger, x509, NID_key_usage,
                            "digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment,keyCertSign");
     if(errRet != UA_STATUSCODE_GOOD) {
@@ -324,8 +300,8 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
     switch(certFormat) {
         case UA_CERTIFICATEFORMAT_DER: {
             unsigned char *p;
-            /* Private Key */
-            /* get length */
+            
+            
             outPrivateKey->length = (size_t)i2d_PrivateKey(pkey, NULL);
             if((int)outPrivateKey->length <= 0) {
                 UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
@@ -333,14 +309,14 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
                 errRet = UA_STATUSCODE_BADINTERNALERROR;
                 goto cleanup;
             }
-            /* allocate buffer */
+            
             UA_ByteString_allocBuffer(outPrivateKey, outPrivateKey->length);
             memset(outPrivateKey->data, 0, outPrivateKey->length);
             p = outPrivateKey->data;
             i2d_PrivateKey(pkey, &p);
 
-            /* Certificate */
-            /* get length */
+            
+            
             outCertificate->length = (size_t)i2d_X509(x509, NULL);
             if((int)outCertificate->length <= 0) {
                 UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
@@ -348,7 +324,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
                 errRet = UA_STATUSCODE_BADINTERNALERROR;
                 goto cleanup;
             }
-            /* allocate buffer */
+            
             UA_ByteString_allocBuffer(outCertificate, outCertificate->length);
             memset(outCertificate->data, 0, outCertificate->length);
             p = outCertificate->data;
@@ -356,7 +332,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
             break;
         }
         case UA_CERTIFICATEFORMAT_PEM: {
-            /* Private Key */
+            
             memPKey = BIO_new(BIO_s_mem());
             if(!memPKey) {
                 UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
@@ -381,7 +357,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
                 goto cleanup;
             }
 
-            /* Certificate */
+            
             memCert = BIO_new(BIO_s_mem());
             if(!memCert) {
                 UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,

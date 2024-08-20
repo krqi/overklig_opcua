@@ -1,5 +1,5 @@
-if(NOT open62541_TOOLS_DIR OR "${open62541_TOOLS_DIR}" STREQUAL "")
-    set(open62541_TOOLS_DIR "${PROJECT_SOURCE_DIR}/tools")
+if(NOT opcua_TOOLS_DIR OR "${opcua_TOOLS_DIR}" STREQUAL "")
+    set(opcua_TOOLS_DIR "${PROJECT_SOURCE_DIR}/tools")
 endif()
 
 # --------------- Generate NodeIDs header ---------------------
@@ -19,7 +19,7 @@ endif()
 #
 #   NAME            Full name of the generated files, e.g. di_nodeids
 #   TARGET_SUFFIX   Suffix for the resulting target. e.g. ids-di
-#   [TARGET_PREFIX] Optional prefix for the resulting target. Default `open62541-generator`
+#   [TARGET_PREFIX] Optional prefix for the resulting target. Default `opcua-generator`
 #   ID_PREFIX       Prefix for the generated node ID defines, e.g. NS_DI
 #   [OUTPUT_DIR]    Optional target directory for the generated files. Default is '${PROJECT_BINARY_DIR}/src_generated'
 #   FILE_CSV        Path to the .csv file containing the node ids, e.g. 'OpcUaDiModel.csv'
@@ -38,11 +38,11 @@ function(ua_generate_nodeid_header)
 
     # Set default value for output dir
     if(NOT UA_GEN_ID_OUTPUT_DIR OR "${UA_GEN_ID_OUTPUT_DIR}" STREQUAL "")
-        set(UA_GEN_ID_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/open62541)
+        set(UA_GEN_ID_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/opcua)
     endif()
     # Set default target prefix
     if(NOT UA_GEN_ID_TARGET_PREFIX OR "${UA_GEN_ID_TARGET_PREFIX}" STREQUAL "")
-        set(UA_GEN_ID_TARGET_PREFIX "open62541-generator")
+        set(UA_GEN_ID_TARGET_PREFIX "opcua-generator")
     endif()
 
     # Replace dash with underscore to make valid c literal
@@ -67,9 +67,9 @@ function(ua_generate_nodeid_header)
     # Header containing defines for all NodeIds
     add_custom_command(OUTPUT ${UA_GEN_ID_OUTPUT_DIR}/${UA_GEN_ID_NAME}.h
         PRE_BUILD
-        COMMAND ${Python3_EXECUTABLE} ${open62541_TOOLS_DIR}/generate_nodeid_header.py
+        COMMAND ${Python3_EXECUTABLE} ${opcua_TOOLS_DIR}/generate_nodeid_header.py
         ${UA_GEN_ID_FILE_CSV}  ${UA_GEN_ID_OUTPUT_DIR}/${UA_GEN_ID_NAME} ${UA_GEN_ID_ID_PREFIX}
-        DEPENDS ${open62541_TOOLS_DIR}/generate_nodeid_header.py
+        DEPENDS ${opcua_TOOLS_DIR}/generate_nodeid_header.py
         ${UA_GEN_ID_FILE_CSV})
 endfunction()
 
@@ -87,7 +87,7 @@ endfunction()
 # - NAME_generated.rst (optional)
 #
 # The cmake resulting cmake target will be named like this:
-#   open62541-generator-${TARGET_SUFFIX}
+#   opcua-generator-${TARGET_SUFFIX}
 #
 # The following arguments are accepted:
 #   Options:
@@ -101,7 +101,7 @@ endfunction()
 #
 #   NAME            Full name of the generated files, e.g. ua_types_di
 #   TARGET_SUFFIX   Suffix for the resulting target. e.g. types-di
-#   [TARGET_PREFIX] Optional prefix for the resulting target. Default `open62541-generator`
+#   [TARGET_PREFIX] Optional prefix for the resulting target. Default `opcua-generator`
 #   [OUTPUT_DIR]    Optional target directory for the generated files. Default is '${PROJECT_BINARY_DIR}/src_generated'
 #   FILE_CSV        Path to the .csv file containing the node ids, e.g. 'OpcUaDiModel.csv'
 #
@@ -129,8 +129,8 @@ function(ua_generate_datatypes)
     set(multiValueArgs FILES_BSD IMPORT_BSD FILES_SELECTED)
     cmake_parse_arguments(UA_GEN_DT "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-    if(NOT DEFINED open62541_TOOLS_DIR)
-        message(FATAL_ERROR "open62541_TOOLS_DIR must point to the open62541 tools directory")
+    if(NOT DEFINED opcua_TOOLS_DIR)
+        message(FATAL_ERROR "opcua_TOOLS_DIR must point to the opcua tools directory")
     endif()
 
     # ------ Argument checking -----
@@ -152,11 +152,11 @@ function(ua_generate_datatypes)
 
     # Set default value for output dir
     if(NOT UA_GEN_DT_OUTPUT_DIR OR "${UA_GEN_DT_OUTPUT_DIR}" STREQUAL "")
-        set(UA_GEN_DT_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/open62541)
+        set(UA_GEN_DT_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/opcua)
     endif()
     # Set default target prefix
     if(NOT UA_GEN_DT_TARGET_PREFIX OR "${UA_GEN_DT_TARGET_PREFIX}" STREQUAL "")
-        set(UA_GEN_DT_TARGET_PREFIX "open62541-generator")
+        set(UA_GEN_DT_TARGET_PREFIX "opcua-generator")
     endif()
 
     # ------ Add custom command and target -----
@@ -219,7 +219,7 @@ function(ua_generate_datatypes)
     add_custom_command(OUTPUT ${UA_GEN_DT_OUTPUT_DIR}/${UA_GEN_DT_NAME}_generated.c
         ${UA_GEN_DT_OUTPUT_DIR}/${UA_GEN_DT_NAME}_generated.h
         PRE_BUILD
-        COMMAND ${ARG_CONV_EXCL_ENV} ${Python3_EXECUTABLE} ${open62541_TOOLS_DIR}/generate_datatypes.py
+        COMMAND ${ARG_CONV_EXCL_ENV} ${Python3_EXECUTABLE} ${opcua_TOOLS_DIR}/generate_datatypes.py
         ${NAMESPACE_MAP_TMP}
         ${SELECTED_TYPES_TMP}
         ${BSD_FILES_TMP}
@@ -230,8 +230,8 @@ function(ua_generate_datatypes)
         ${UA_GEN_DT_INTERNAL_ARG}
         ${UA_GEN_DT_OUTPUT_DIR}/${UA_GEN_DT_NAME}
         ${UA_GEN_DOC_ARG}
-        DEPENDS ${open62541_TOOLS_DIR}/generate_datatypes.py
-                ${open62541_TOOLS_DIR}/nodeset_compiler/backend_open62541_typedefinitions.py
+        DEPENDS ${opcua_TOOLS_DIR}/generate_datatypes.py
+                ${opcua_TOOLS_DIR}/nodeset_compiler/backend_opcua_typedefinitions.py
         ${UA_GEN_DT_FILES_BSD}
         ${UA_GEN_DT_FILE_XML}
         ${UA_GEN_DT_FILE_CSV}
@@ -245,7 +245,7 @@ function(ua_generate_datatypes)
     if(UA_GEN_DT_AUTOLOAD AND UA_ENABLE_NODESET_INJECTOR)
         list(APPEND UA_NODESETINJECTOR_GENERATORS ${UA_GEN_DT_TARGET_PREFIX}-${UA_GEN_DT_TARGET_SUFFIX})
         set(UA_NODESETINJECTOR_GENERATORS ${UA_NODESETINJECTOR_GENERATORS} PARENT_SCOPE)
-        list(APPEND UA_NODESETINJECTOR_SOURCE_FILES  ${PROJECT_BINARY_DIR}/src_generated/open62541/${UA_GEN_DT_NAME}_generated.c)
+        list(APPEND UA_NODESETINJECTOR_SOURCE_FILES  ${PROJECT_BINARY_DIR}/src_generated/opcua/${UA_GEN_DT_NAME}_generated.c)
         set(UA_NODESETINJECTOR_SOURCE_FILES ${UA_NODESETINJECTOR_SOURCE_FILES} PARENT_SCOPE)
     endif()
 
@@ -266,7 +266,7 @@ endfunction()
 # - ua_namespace_NAME.h
 #
 # The resulting cmake target will be named like this:
-#   open62541-generator-ns-${NAME}
+#   opcua-generator-ns-${NAME}
 #
 # The following arguments are accepted:
 #   Options:
@@ -280,7 +280,7 @@ endfunction()
 #   [TYPES_ARRAY]   Optional name of the types array containing the custom datatypes of this node set.
 #   [OUTPUT_DIR]    Optional target directory for the generated files. Default is '${PROJECT_BINARY_DIR}/src_generated'
 #   [IGNORE]        Optional file containing a list of node ids which should be ignored. The file should have one id per line.
-#   [TARGET_PREFIX] Optional prefix for the resulting target. Default `open62541-generator`
+#   [TARGET_PREFIX] Optional prefix for the resulting target. Default `opcua-generator`
 #   [BLACKLIST]     Blacklist file passed as --blacklist to the nodeset compiler. All the given nodes will be removed from the generated
 #                   nodeset, including all the references to and from that node. The format is a node id per line.
 #                   Supported formats: "i=123" (for NS0), "ns=2;s=asdf" (matches NS2 in that specific file), or recommended
@@ -302,8 +302,8 @@ function(ua_generate_nodeset)
     set(multiValueArgs FILE DEPENDS_TYPES DEPENDS_NS DEPENDS_TARGET)
     cmake_parse_arguments(UA_GEN_NS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-    if(NOT DEFINED open62541_TOOLS_DIR)
-        message(FATAL_ERROR "open62541_TOOLS_DIR must point to the open62541 tools directory")
+    if(NOT DEFINED opcua_TOOLS_DIR)
+        message(FATAL_ERROR "opcua_TOOLS_DIR must point to the opcua tools directory")
     endif()
 
     # ------ Argument checking -----
@@ -317,12 +317,12 @@ function(ua_generate_nodeset)
 
     # Set default value for output dir
     if(NOT UA_GEN_NS_OUTPUT_DIR OR "${UA_GEN_NS_OUTPUT_DIR}" STREQUAL "")
-        set(UA_GEN_NS_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/open62541)
+        set(UA_GEN_NS_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/opcua)
     endif()
 
     # Set default target prefix
     if(NOT UA_GEN_NS_TARGET_PREFIX OR "${UA_GEN_NS_TARGET_PREFIX}" STREQUAL "")
-        set(UA_GEN_NS_TARGET_PREFIX "open62541-generator")
+        set(UA_GEN_NS_TARGET_PREFIX "opcua-generator")
     endif()
 
 
@@ -396,7 +396,7 @@ function(ua_generate_nodeset)
     add_custom_command(OUTPUT ${UA_GEN_NS_OUTPUT_DIR}/namespace${FILE_SUFFIX}.c
                        ${UA_GEN_NS_OUTPUT_DIR}/namespace${FILE_SUFFIX}.h
                        PRE_BUILD
-                       COMMAND ${Python3_EXECUTABLE} ${open62541_TOOLS_DIR}/nodeset_compiler/nodeset_compiler.py
+                       COMMAND ${Python3_EXECUTABLE} ${opcua_TOOLS_DIR}/nodeset_compiler/nodeset_compiler.py
                        ${GEN_INTERNAL_HEADERS}
                        ${GEN_NS0}
                        ${GEN_BIN_SIZE}
@@ -408,13 +408,13 @@ function(ua_generate_nodeset)
                        ${FILE_LIST}
                        ${UA_GEN_NS_OUTPUT_DIR}/namespace${FILE_SUFFIX}
                        DEPENDS
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/nodeset_compiler.py
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/nodes.py
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/nodeset.py
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/datatypes.py
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/backend_open62541.py
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/backend_open62541_nodes.py
-                       ${open62541_TOOLS_DIR}/nodeset_compiler/backend_open62541_datatypes.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/nodeset_compiler.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/nodes.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/nodeset.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/datatypes.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/backend_opcua.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/backend_opcua_nodes.py
+                       ${opcua_TOOLS_DIR}/nodeset_compiler/backend_opcua_datatypes.py
                        ${UA_GEN_NS_FILE}
                        ${UA_GEN_NS_DEPENDS_NS}
                        ${GEN_BLACKLIST_DEPENDS}
@@ -433,10 +433,10 @@ function(ua_generate_nodeset)
             message(WARNING "The AUTOLOAD flag is set. However, the Nodesetinjector feature isn't enabled.")
         else()
             if(NOT TARGET ${UA_GEN_NS_TARGET_PREFIX}-${TARGET_SUFFIX}-autoinjection)
-                add_dependencies(${UA_GEN_NS_TARGET_PREFIX}-${TARGET_SUFFIX} open62541-generator-nodesetinjector)
+                add_dependencies(${UA_GEN_NS_TARGET_PREFIX}-${TARGET_SUFFIX} opcua-generator-nodesetinjector)
                 add_custom_target(${UA_GEN_NS_TARGET_PREFIX}-${TARGET_SUFFIX}-autoinjection
-                                  COMMAND ${Python3_EXECUTABLE} ${open62541_TOOLS_DIR}/nodeset_injector/generate_nodesetinjector_content.py
-                                  ${PROJECT_BINARY_DIR}/src_generated/open62541/nodesetinjector
+                                  COMMAND ${Python3_EXECUTABLE} ${opcua_TOOLS_DIR}/nodeset_injector/generate_nodesetinjector_content.py
+                                  ${PROJECT_BINARY_DIR}/src_generated/opcua/nodesetinjector
                                   "namespace${FILE_SUFFIX}"
                                   DEPENDS
                                   ${UA_GEN_NS_OUTPUT_DIR}/namespace${FILE_SUFFIX}.c
@@ -449,7 +449,7 @@ function(ua_generate_nodeset)
                 # that the required namespaces are loaded first. Otherwise it can happen that e.g. machinery is loaded before di,
                 # which does not work because machinery is based on di.
                 foreach(DEPEND ${UA_GEN_NS_DEPENDS_TARGET})
-                    string(FIND ${DEPEND} "open62541-generator-ns" POS)
+                    string(FIND ${DEPEND} "opcua-generator-ns" POS)
                     if(POS GREATER_EQUAL 0)
                         add_dependencies(${UA_GEN_NS_TARGET_PREFIX}-${TARGET_SUFFIX}-autoinjection ${DEPEND}-autoinjection)
                     endif()
@@ -502,7 +502,7 @@ endfunction()
 # with this function or with the ua_generate_nodeset function.
 #
 # The resulting cmake target will be named like this:
-#   open62541-generator-ns-${NAME}
+#   opcua-generator-ns-${NAME}
 #
 # The following arguments are accepted:
 #
@@ -523,7 +523,7 @@ endfunction()
 #                   nodeset, including all the references to and from that node. The format is a node id per line.
 #                   Supported formats: "i=123" (for NS0), "ns=2;s=asdf" (matches NS2 in that specific file), or recommended
 #                   "ns=http://opcfoundation.org/UA/DI/;i=123" namespace index independent node id
-#   [TARGET_PREFIX] Optional prefix for the resulting targets. Default `open62541-generator`
+#   [TARGET_PREFIX] Optional prefix for the resulting targets. Default `opcua-generator`
 #
 #   Arguments taking multiple values:
 #   [NAMESPACE_MAP] [Deprecated]Array of Namespace index mappings to indicate the final namespace index of a namespace uri when the server is started.
@@ -544,8 +544,8 @@ function(ua_generate_nodeset_and_datatypes)
     set(multiValueArgs DEPENDS IMPORT_BSD)
     cmake_parse_arguments(UA_GEN "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
-    if(NOT DEFINED open62541_TOOLS_DIR)
-        message(FATAL_ERROR "open62541_TOOLS_DIR must point to the open62541 tools directory")
+    if(NOT DEFINED opcua_TOOLS_DIR)
+        message(FATAL_ERROR "opcua_TOOLS_DIR must point to the opcua tools directory")
     endif()
 
     if(NOT DEFINED UA_SCHEMA_DIR)
@@ -573,11 +573,11 @@ function(ua_generate_nodeset_and_datatypes)
 
     # Set default value for output dir
     if(NOT UA_GEN_OUTPUT_DIR OR "${UA_GEN_OUTPUT_DIR}" STREQUAL "")
-        set(UA_GEN_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/open62541)
+        set(UA_GEN_OUTPUT_DIR ${PROJECT_BINARY_DIR}/src_generated/opcua)
     endif()
     # Set default target prefix
     if(NOT UA_GEN_TARGET_PREFIX OR "${UA_GEN_TARGET_PREFIX}" STREQUAL "")
-        set(UA_GEN_TARGET_PREFIX "open62541-generator")
+        set(UA_GEN_TARGET_PREFIX "opcua-generator")
     endif()
 
     set(NODESET_DEPENDS_TARGET "")
@@ -592,7 +592,7 @@ function(ua_generate_nodeset_and_datatypes)
     if("${UA_GEN_FILE_BSD}" STREQUAL "" AND NOT "${UA_GEN_FILE_CSV}" STREQUAL "")
         string(TOUPPER "${UA_GEN_NAME}" BSD_NAME)
         file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/bsd_files_gen")
-        execute_process(COMMAND ${Python3_EXECUTABLE} ${open62541_TOOLS_DIR}/generate_bsd.py
+        execute_process(COMMAND ${Python3_EXECUTABLE} ${opcua_TOOLS_DIR}/generate_bsd.py
                         --xml ${UA_GEN_FILE_NS}
                         ${PROJECT_BINARY_DIR}/bsd_files_gen/Opc.Ua.${BSD_NAME}.Types.bsd)
         if(EXISTS "${PROJECT_BINARY_DIR}/bsd_files_gen/Opc.Ua.${BSD_NAME}.Types.bsd")

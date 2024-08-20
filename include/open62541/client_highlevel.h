@@ -1,45 +1,13 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2015-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2015 (c) Oleksiy Vasylyev
- *    Copyright 2017 (c) Florian Palm
- *    Copyright 2016 (c) Chris Iatrou
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Frank Meerkötter
- *    Copyright 2018 (c) Fabian Arndt
- *    Copyright 2018 (c) Peter Rustler, basyskom GmbH
- */
 
 #ifndef UA_CLIENT_HIGHLEVEL_H_
 #define UA_CLIENT_HIGHLEVEL_H_
 
-#include <open62541/client.h>
+#include <opcua/client.h>
 
 _UA_BEGIN_DECLS
 
-/**
- * .. _client-highlevel:
- *
- * Highlevel Client Functionality
- * ------------------------------
- *
- * The following definitions are convenience functions making use of the
- * standard OPC UA services in the background. This is a less flexible way of
- * handling the stack, because at many places sensible defaults are presumed; at
- * the same time using these functions is the easiest way of implementing an OPC
- * UA application, as you will not have to consider all the details that go into
- * the OPC UA services. If more flexibility is needed, you can always achieve
- * the same functionality using the raw :ref:`OPC UA services
- * <client-services>`.
- *
- * Read Attributes
- * ^^^^^^^^^^^^^^^
- * The following functions can be used to retrieve a single node attribute. Use
- * the regular service to read several attributes at once. */
 
-/* Don't call this function, use the typed versions */
+
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 __UA_Client_readAttribute(UA_Client *client, const UA_NodeId *nodeId,
                           UA_AttributeId attributeId, void *out,
@@ -219,11 +187,6 @@ UA_Client_readUserExecutableAttribute(UA_Client *client, const UA_NodeId nodeId,
                                      &UA_TYPES[UA_TYPES_BOOLEAN]);
 })
 
-/**
- * Historical Access
- * ^^^^^^^^^^^^^^^^^
- * The following functions can be used to read a single node historically.
- * Use the regular service to read several nodes at once. */
 
 typedef UA_Boolean
 (*UA_HistoricalIteratorCallback)(
@@ -271,14 +234,8 @@ UA_Client_HistoryUpdate_deleteRaw(
     UA_Client *client, const UA_NodeId *nodeId,
     UA_DateTime startTimestamp, UA_DateTime endTimestamp);
 
-/**
- * Write Attributes
- * ^^^^^^^^^^^^^^^^
- *
- * The following functions can be use to write a single node attribute at a
- * time. Use the regular write service to write several attributes at once. */
 
-/* Don't call this function, use the typed versions */
+
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 __UA_Client_writeAttribute(UA_Client *client, const UA_NodeId *nodeId,
                            UA_AttributeId attributeId, const void *in,
@@ -393,7 +350,7 @@ UA_Client_writeValueAttribute_scalar(UA_Client *client, const UA_NodeId nodeId,
                                       newValue, valueType);
 })
 
-/* Write a DataValue that can include timestamps and status codes */
+
 UA_INLINABLE( UA_THREADSAFE UA_StatusCode
 UA_Client_writeValueAttributeEx(UA_Client *client, const UA_NodeId nodeId,
                                 const UA_DataValue *newValue), {
@@ -475,9 +432,6 @@ UA_Client_writeUserExecutableAttribute(UA_Client *client, const UA_NodeId nodeId
                                       &UA_TYPES[UA_TYPES_BOOLEAN]);
 })
 
-/**
- * Method Calling
- * ^^^^^^^^^^^^^^ */
 
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 UA_Client_call(UA_Client *client,
@@ -485,10 +439,6 @@ UA_Client_call(UA_Client *client,
                size_t inputSize, const UA_Variant *input,
                size_t *outputSize, UA_Variant **output);
 
-/**
- * Node Management
- * ^^^^^^^^^^^^^^^
- * See the section on :ref:`server-side node management <addnodes>`. */
 
 UA_StatusCode UA_EXPORT
 UA_Client_addReference(UA_Client *client, const UA_NodeId sourceNodeId,
@@ -507,7 +457,7 @@ UA_StatusCode UA_EXPORT
 UA_Client_deleteNode(UA_Client *client, const UA_NodeId nodeId,
                      UA_Boolean deleteTargetReferences);
 
-/* Don't call this function, use the typed versions */
+
 UA_StatusCode UA_EXPORT
 __UA_Client_addNode(UA_Client *client, const UA_NodeClass nodeClass,
                     const UA_NodeId requestedNewNodeId,
@@ -631,25 +581,13 @@ UA_Client_addMethodNode(UA_Client *client, const UA_NodeId requestedNewNodeId,
                                &UA_TYPES[UA_TYPES_METHODATTRIBUTES], outNewNodeId);
 })
 
-/**
- * Misc Highlevel Functionality
- * ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ */
 
-/* Get the namespace-index of a namespace-URI
- *
- * @param client The UA_Client struct for this connection
- * @param namespaceUri The interested namespace URI
- * @param namespaceIndex The namespace index of the URI. The value is unchanged
- *        in case of an error
- * @return Indicates whether the operation succeeded or returns an error code */
 UA_StatusCode UA_EXPORT UA_THREADSAFE
 UA_Client_NamespaceGetIndex(UA_Client *client, UA_String *namespaceUri,
                             UA_UInt16 *namespaceIndex);
 
 #ifndef HAVE_NODEITER_CALLBACK
 #define HAVE_NODEITER_CALLBACK
-/* Iterate over all nodes referenced by parentNodeId by calling the callback
- * function for each child node */
 typedef UA_StatusCode
 (*UA_NodeIteratorCallback)(UA_NodeId childId, UA_Boolean isInverse,
                            UA_NodeId referenceTypeId, void *handle);
@@ -662,4 +600,4 @@ UA_Client_forEachChildNodeCall(
 
 _UA_END_DECLS
 
-#endif /* UA_CLIENT_HIGHLEVEL_H_ */
+#endif 

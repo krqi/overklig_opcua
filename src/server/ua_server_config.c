@@ -1,12 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2019 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2019 (c) HMS Industrial Networks AB (Author: Jonas Green)
- */
 
-#include <open62541/server.h>
+#include <opcua/server.h>
 
 #include "ua_server_internal.h"
 
@@ -15,7 +8,7 @@ UA_ServerConfig_clear(UA_ServerConfig *config) {
     if(!config)
         return;
 
-    /* Server Description */
+    
     UA_BuildInfo_clear(&config->buildInfo);
     UA_ApplicationDescription_clear(&config->applicationDescription);
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
@@ -28,7 +21,7 @@ UA_ServerConfig_clear(UA_ServerConfig *config) {
 # endif
 #endif
 
-    /* Stop and delete the EventLoop */
+    
     UA_EventLoop *el = config->eventLoop;
     if(el && !config->externalEventLoop) {
         if(el->state != UA_EVENTLOOPSTATE_FRESH &&
@@ -42,13 +35,13 @@ UA_ServerConfig_clear(UA_ServerConfig *config) {
         config->eventLoop = NULL;
     }
 
-    /* Networking */
+    
     UA_Array_delete(config->serverUrls, config->serverUrlsSize,
                     &UA_TYPES[UA_TYPES_STRING]);
     config->serverUrls = NULL;
     config->serverUrlsSize = 0;
 
-    /* Security Policies */
+    
     for(size_t i = 0; i < config->securityPoliciesSize; ++i) {
         UA_SecurityPolicy *policy = &config->securityPolicies[i];
         policy->clear(policy);
@@ -64,23 +57,23 @@ UA_ServerConfig_clear(UA_ServerConfig *config) {
     config->endpoints = NULL;
     config->endpointsSize = 0;
 
-    /* Nodestore */
+    
     if(config->nodestore.context && config->nodestore.clear) {
         config->nodestore.clear(config->nodestore.context);
         config->nodestore.context = NULL;
     }
 
-    /* Certificate Validation */
+    
     if(config->secureChannelPKI.clear)
         config->secureChannelPKI.clear(&config->secureChannelPKI);
     if(config->sessionPKI.clear)
         config->sessionPKI.clear(&config->sessionPKI);
 
-    /* Access Control */
+    
     if(config->accessControl.clear)
         config->accessControl.clear(&config->accessControl);
 
-    /* Historical data */
+    
 #ifdef UA_ENABLE_HISTORIZING
     if(config->historyDatabase.clear)
         config->historyDatabase.clear(&config->historyDatabase);
@@ -95,14 +88,14 @@ UA_ServerConfig_clear(UA_ServerConfig *config) {
         config->pubSubConfig.securityPolicies = NULL;
         config->pubSubConfig.securityPoliciesSize = 0;
     }
-#endif /* UA_ENABLE_PUBSUB */
+#endif 
 
-    /* Logger */
+    
     if(config->logging != NULL && config->logging->clear != NULL)
         config->logging->clear(config->logging);
     config->logging = NULL;
 
-    /* Custom Data Types */
+    
     UA_cleanupDataTypeWithCustom(config->customDataTypes);
     config->customDataTypes = NULL;
 }

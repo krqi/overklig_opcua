@@ -54,7 +54,7 @@ class testing:
                 ns.append(n)
             print("...done, " + str(len(ns)) + " nodes discovered")
 
-class testing_open62541_header:
+class testing_opcua_header:
     def __init__(self):
         self.ns = opcua_ns("testing")
 
@@ -69,13 +69,13 @@ class testing_open62541_header:
         self.ns.sanitize()
 
         logger.debug("Phase 3: Calling C Printers")
-        code = self.ns.printOpen62541Header()
+        code = self.ns.printopcuaHeader()
 
-        codeout = codecs.open("./open62541_nodeset.c", "w+", encoding='utf-8')
+        codeout = codecs.open("./opcua_nodeset.c", "w+", encoding='utf-8')
         for line in code:
             codeout.write(line + "\n")
         codeout.close()
         return
 
 if __name__ == '__main__':
-    tst = testing_open62541_header()
+    tst = testing_opcua_header()

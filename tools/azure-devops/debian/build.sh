@@ -12,10 +12,10 @@ cat ./debian/changelog
 echo "--------------------------------------"
 #dpkg-buildpackage -b
 
-echo "Test file1" > ../libopen62541_dev.deb
-echo "Test file2" > ../libopen62541_tools.deb
+echo "Test file1" > ../libopcua_dev.deb
+echo "Test file2" > ../libopcua_tools.deb
 
 if [ $? -ne 0 ] ; then exit 1 ; fi
 
 echo "Copying .deb files to $BUILD_ARTIFACTSTAGINGDIRECTORY"
-cp ../libopen62541*.deb $BUILD_ARTIFACTSTAGINGDIRECTORY
+cp ../libopcua*.deb $BUILD_ARTIFACTSTAGINGDIRECTORY

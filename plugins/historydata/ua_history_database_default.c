@@ -1,12 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2018 (c) basysKom GmbH <opensource@basyskom.com> (Author: Peter Rustler)
- */
 
-#include <open62541/plugin/historydata/history_data_gathering_default.h>
-#include <open62541/plugin/historydata/history_database_default.h>
+#include <opcua/plugin/historydata/history_data_gathering_default.h>
+#include <opcua/plugin/historydata/history_database_default.h>
 
 #include <limits.h>
 

@@ -1,11 +1,5 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2017-2018 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- */
 
-#include <open62541/plugin/securitypolicy_default.h>
+#include <opcua/plugin/securitypolicy_default.h>
 
 #ifdef UA_ENABLE_ENCRYPTION_MBEDTLS
 #include "mbedtls/securitypolicy_common.h"
@@ -62,7 +56,7 @@ generateKey_none(void *policyContext, const UA_ByteString *secret,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Use the non-cryptographic RNG to set the nonce */
+
 static UA_StatusCode
 generateNonce_none(void *policyContext, UA_ByteString *out) {
     if(out == NULL)
@@ -71,7 +65,7 @@ generateNonce_none(void *policyContext, UA_ByteString *out) {
     if(out->length == 0)
         return UA_STATUSCODE_GOOD;
 
-    /* Fill blocks of four byte */
+    
     size_t i = 0;
     while(i + 3 < out->length) {
         UA_UInt32 randNumber = UA_UInt32_random();
@@ -79,7 +73,7 @@ generateNonce_none(void *policyContext, UA_ByteString *out) {
         i = i+4;
     }
 
-    /* Fill the remaining byte */
+    
     UA_UInt32 randNumber = UA_UInt32_random();
     memcpy(&out->data[i], &randNumber, out->length % 4);
 

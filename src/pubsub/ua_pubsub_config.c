@@ -1,12 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2020 Yannick Wallerer, Siemens AG
- * Copyright (c) 2020 Thomas Fischer, Siemens AG
- */
 
-#include <open62541/server_pubsub.h>
+#include <opcua/server_pubsub.h>
 
 #if defined(UA_ENABLE_PUBSUB) && defined(UA_ENABLE_PUBSUB_FILE_CONFIG)
 #include "pubsub/ua_pubsub.h"
@@ -53,7 +46,7 @@ static UA_StatusCode
 generatePubSubConfigurationDataType(UA_Server *server,
                                     UA_PubSubConfigurationDataType *pubSubConfiguration);
 
-/* Gets PubSub Configuration from an ExtensionObject */
+
 static UA_StatusCode
 extractPubSubConfigFromExtensionObject(UA_Server *server,
                                        const UA_ExtensionObject *src,
@@ -86,7 +79,7 @@ extractPubSubConfigFromExtensionObject(UA_Server *server,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Configures a PubSub Server with given PubSubConfigurationDataType object */
+
 static UA_StatusCode
 updatePubSubConfig(UA_Server *server,
                    const UA_PubSubConfigurationDataType *configurationParameters) {
@@ -100,7 +93,7 @@ updatePubSubConfig(UA_Server *server,
 
     UA_PubSubManager_delete(server, &server->pubSubManager);
 
-    /* Configuration of Published DataSets: */
+    
     UA_UInt32 pdsCount = (UA_UInt32)configurationParameters->publishedDataSetsSize;
     UA_NodeId *publishedDataSetIdent = (UA_NodeId*)UA_calloc(pdsCount, sizeof(UA_NodeId));
     if(!publishedDataSetIdent)
@@ -120,7 +113,7 @@ updatePubSubConfig(UA_Server *server,
         }
     }
 
-    /* Configuration of PubSub Connections: */
+    
     if(configurationParameters->connectionsSize < 1) {
         UA_LOG_WARNING(server->config.logging, UA_LOGCATEGORY_SERVER,
                        "[UA_PubSubManager_updatePubSubConfig] no connection in "
@@ -142,8 +135,6 @@ updatePubSubConfig(UA_Server *server,
     return res;
 }
 
-/* Function called by UA_PubSubManager_createPubSubConnection to create all WriterGroups
- * and ReaderGroups that belong to a certain connection. */
 static UA_StatusCode
 createComponentsForConnection(UA_Server *server,
                               const UA_PubSubConnectionDataType *connParams,
@@ -151,7 +142,7 @@ createComponentsForConnection(UA_Server *server,
                               const UA_NodeId *pdsIdent) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* WriterGroups configuration */
+    
     UA_StatusCode res = UA_STATUSCODE_GOOD;
     for(size_t i = 0; i < connParams->writerGroupsSize; i++) {
         res = createWriterGroup(server, &connParams->writerGroups[i],
@@ -164,7 +155,7 @@ createComponentsForConnection(UA_Server *server,
         }
     }
 
-    /* ReaderGroups configuration */
+    
     for(size_t j = 0; j < connParams->readerGroupsSize; j++) {
         res = createReaderGroup(server, &connParams->readerGroups[j], connectionIdent);
         if(res != UA_STATUSCODE_GOOD) {
@@ -178,12 +169,6 @@ createComponentsForConnection(UA_Server *server,
     return res;
 }
 
-/* Creates PubSubConnection configuration from PubSubConnectionDataType object
- *
- * @param server Server object that shall be configured
- * @param connParams PubSub connection configuration
- * @param pdsCount Number of published DataSets
- * @param pdsIdent Array of NodeIds of the published DataSets */
 static UA_StatusCode
 createPubSubConnection(UA_Server *server, const UA_PubSubConnectionDataType *connParams,
                        UA_UInt32 pdsCount, UA_NodeId *pdsIdent) {
@@ -229,11 +214,11 @@ createPubSubConnection(UA_Server *server, const UA_PubSubConnectionDataType *con
                        "TransportSettings can not be read");
     }
 
-    /* Load connection config into server: */
+    
     UA_NodeId connectionIdent;
     res = UA_PubSubConnection_create(server, &config, &connectionIdent);
     if(res == UA_STATUSCODE_GOOD) {
-        /* Configuration of all Components that belong to this connection: */
+        
         res = createComponentsForConnection(server, connParams, connectionIdent,
                                             pdsCount, pdsIdent);
     } else {
@@ -246,8 +231,6 @@ createPubSubConnection(UA_Server *server, const UA_PubSubConnectionDataType *con
     return res;
 }
 
-/* Function called by UA_PubSubManager_createWriterGroup to configure the messageSettings
- * of a writerGroup */
 static UA_StatusCode
 setWriterGroupEncodingType(UA_Server *server,
                            const UA_WriterGroupDataType *writerGroupParameters,
@@ -278,13 +261,6 @@ setWriterGroupEncodingType(UA_Server *server,
     return UA_STATUSCODE_GOOD;
 }
 
-/* WriterGroup configuration from WriterGroup object
- *
- * @param server Server object that shall be configured
- * @param writerGroupParameters WriterGroup configuration
- * @param connectionIdent NodeId of the PubSub connection, the WriterGroup belongs to
- * @param pdsCount Number of published DataSets
- * @param pdsIdent Array of NodeIds of the published DataSets */
 static UA_StatusCode
 createWriterGroup(UA_Server *server,
                   const UA_WriterGroupDataType *writerGroupParameters,
@@ -305,7 +281,7 @@ createWriterGroup(UA_Server *server,
     config.messageSettings =       writerGroupParameters->messageSettings;
     config.groupProperties.mapSize =   writerGroupParameters->groupPropertiesSize;
     config.groupProperties.map =   writerGroupParameters->groupProperties;
-    config.maxEncapsulatedDataSetMessageCount = 255; /* non std parameter */
+    config.maxEncapsulatedDataSetMessageCount = 255; 
 
     UA_StatusCode res = setWriterGroupEncodingType(server, writerGroupParameters, &config);
     if(res != UA_STATUSCODE_GOOD) {
@@ -315,7 +291,7 @@ createWriterGroup(UA_Server *server,
         return res;
     }
 
-    /* Load config into server: */
+    
     UA_NodeId writerGroupIdent;
     res = UA_WriterGroup_create(server, connectionIdent, &config, &writerGroupIdent);
     UA_WriterGroup *wg = UA_WriterGroup_findWGbyId(server, writerGroupIdent);
@@ -328,7 +304,7 @@ createWriterGroup(UA_Server *server,
         return res;
     }
 
-    /* Configuration of all DataSetWriters that belong to this WriterGroup */
+    
     for(size_t dsw = 0; dsw < writerGroupParameters->dataSetWritersSize; dsw++) {
         res = createDataSetWriter(server, &writerGroupParameters->dataSetWriters[dsw],
                                   writerGroupIdent, pdsCount, pdsIdent);
@@ -342,15 +318,6 @@ createWriterGroup(UA_Server *server,
     return res;
 }
 
-/* Function called by UA_PubSubManager_createDataSetWriter. It searches for a
- * PublishedDataSet that is referenced by the DataSetWriter. If a related PDS is found,
- * the DSWriter will be added to the server, otherwise, no DSWriter will be added.
- *
- * @param server UA_Server object that shall be configured
- * @param writerGroupIdent NodeId of writerGroup, the DataSetWriter belongs to
- * @param dsWriterConfig WriterGroup configuration
- * @param pdsCount Number of published DataSets
- * @param pdsIdent Array of NodeIds of the published DataSets */
 static UA_StatusCode
 addDataSetWriterWithPdsReference(UA_Server *server, UA_NodeId writerGroupIdent,
                                  const UA_DataSetWriterConfig *dsWriterConfig,
@@ -364,7 +331,7 @@ addDataSetWriterWithPdsReference(UA_Server *server, UA_NodeId writerGroupIdent,
     UA_StatusCode res = UA_STATUSCODE_GOOD;
     for(size_t pds = 0; pds < pdsCount && res == UA_STATUSCODE_GOOD; pds++) {
         res = getPublishedDataSetConfig(server, pdsIdent[pds], &pdsConfig);
-        /* members of pdsConfig must be deleted manually */
+        
         if(res != UA_STATUSCODE_GOOD) {
             UA_LOG_ERROR(server->config.logging, UA_LOGCATEGORY_SERVER,
                          "[UA_PubSubManager_addDataSetWriterWithPdsReference] "
@@ -376,7 +343,7 @@ addDataSetWriterWithPdsReference(UA_Server *server, UA_NodeId writerGroupIdent,
            0 == strncmp((const char *)dsWriterConfig->dataSetName.data,
                         (const char *)pdsConfig.name.data,
                         dsWriterConfig->dataSetName.length)) {
-            /* DSWriter will only be created, if a matching PDS is found: */
+            
             res = UA_DataSetWriter_create(server, writerGroupIdent, pdsIdent[pds],
                                           dsWriterConfig, &dataSetWriterIdent);
             if(res != UA_STATUSCODE_GOOD) {
@@ -389,7 +356,7 @@ addDataSetWriterWithPdsReference(UA_Server *server, UA_NodeId writerGroupIdent,
 
             UA_PublishedDataSetConfig_clear(&pdsConfig);
             if(pdsFound)
-                break; /* break loop if corresponding publishedDataSet was found */
+                break; 
         }
     }
 
@@ -402,13 +369,6 @@ addDataSetWriterWithPdsReference(UA_Server *server, UA_NodeId writerGroupIdent,
     return res;
 }
 
-/* Creates DataSetWriter configuration from DataSetWriter object
- *
- * @param server UA_Server object that shall be configured
- * @param dataSetWriterParameters DataSetWriter Configuration
- * @param writerGroupIdent NodeId of writerGroup, the DataSetWriter belongs to
- * @param pdsCount Number of published DataSets
- * @param pdsIdent Array of NodeIds of the published DataSets */
 static UA_StatusCode
 createDataSetWriter(UA_Server *server,
                     const UA_DataSetWriterDataType *dataSetWriterParameters,
@@ -438,11 +398,6 @@ createDataSetWriter(UA_Server *server,
     return res;
 }
 
-/* Creates ReaderGroup configuration from ReaderGroup object
- *
- * @param server UA_Server object that shall be configured
- * @param readerGroupParameters ReaderGroup configuration
- * @param connectionIdent NodeId of the PubSub connection, the ReaderGroup belongs to */
 static UA_StatusCode
 createReaderGroup(UA_Server *server,
                   const UA_ReaderGroupDataType *readerGroupParameters,
@@ -484,11 +439,6 @@ createReaderGroup(UA_Server *server,
     return res;
 }
 
-/* Creates TargetVariables or SubscribedDataSetMirror for a given DataSetReader
- *
- * @param server UA_Server object that shall be configured
- * @param dsReaderIdent NodeId of the DataSetReader the SubscribedDataSet belongs to
- * @param dataSetReaderParameters Configuration Parameters of the DataSetReader */
 static UA_StatusCode
 addSubscribedDataSet(UA_Server *server, const UA_NodeId dsReaderIdent,
                      const UA_ExtensionObject *subscribedDataSet) {
@@ -540,11 +490,6 @@ addSubscribedDataSet(UA_Server *server, const UA_NodeId dsReaderIdent,
     return UA_STATUSCODE_BADINTERNALERROR;
 }
 
-/* Creates DataSetReader configuration from DataSetReader object
- *
- * @param server UA_Server object that shall be configured
- * @param dataSetReaderParameters DataSetReader configuration
- * @param writerGroupIdent NodeId of readerGroupParameters, the DataSetReader belongs to */
 static UA_StatusCode
 createDataSetReader(UA_Server *server, const UA_DataSetReaderDataType *dsrParams,
                     UA_NodeId readerGroupIdent) {
@@ -580,11 +525,6 @@ createDataSetReader(UA_Server *server, const UA_DataSetReaderDataType *dsrParams
     return res;
 }
 
-/* Determines whether PublishedDataSet is of type PublishedItems or PublishedEvents.
- * (PublishedEvents are currently not supported!)
- *
- * @param publishedDataSetParameters PublishedDataSet parameters
- * @param config PublishedDataSet configuration object */
 static UA_StatusCode
 setPublishedDataSetType(UA_Server *server,
                         const UA_PublishedDataSetDataType *pdsParams,
@@ -597,7 +537,7 @@ setPublishedDataSetType(UA_Server *server,
         config->publishedDataSetType = UA_PUBSUB_DATASET_PUBLISHEDITEMS;
         return UA_STATUSCODE_GOOD;
     } else if(sourceType == &UA_TYPES[UA_TYPES_PUBLISHEDEVENTSDATATYPE]) {
-        /* config.publishedDataSetType = UA_PUBSUB_DATASET_PUBLISHEDEVENTS; */
+        
         UA_LOG_ERROR(server->config.logging, UA_LOGCATEGORY_SERVER,
                      "[UA_PubSubManager_setPublishedDataSetType] Published events not supported.");
         return UA_STATUSCODE_BADNOTIMPLEMENTED;
@@ -608,11 +548,6 @@ setPublishedDataSetType(UA_Server *server,
     return UA_STATUSCODE_BADINTERNALERROR;
 }
 
-/* Creates PublishedDataSetConfig object from PublishedDataSet object
- *
- * @param server UA_Server object that shall be configured
- * @param pdsParams publishedDataSet configuration
- * @param pdsIdent NodeId of the publishedDataSet */
 static UA_StatusCode
 createPublishedDataSet(UA_Server *server,
                        const UA_PublishedDataSetDataType *pdsParams,
@@ -635,7 +570,7 @@ createPublishedDataSet(UA_Server *server,
         return res;
     }
 
-    /* DataSetField configuration for this publishedDataSet: */
+    
     res = createDataSetFields(server, pdsIdent, pdsParams);
     if(res != UA_STATUSCODE_GOOD) {
         UA_LOG_ERROR(server->config.logging, UA_LOGCATEGORY_SERVER,
@@ -646,12 +581,6 @@ createPublishedDataSet(UA_Server *server,
     return res;
 }
 
-/* Adds DataSetField Variables bound to a certain PublishedDataSet. This method does NOT
- * check, whether the PublishedDataSet actually contains Variables instead of Events!
- *
- * @param server UA_Server object that shall be configured
- * @param pdsIdent NodeId of the publishedDataSet, the DataSetField belongs to
- * @param publishedDataSetParameters publishedDataSet configuration */
 static UA_StatusCode
 addDataSetFieldVariables(UA_Server *server, const UA_NodeId *pdsIdent,
                          const UA_PublishedDataSetDataType *pdsParams) {
@@ -686,12 +615,6 @@ addDataSetFieldVariables(UA_Server *server, const UA_NodeId *pdsIdent,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Checks if PublishedDataSet contains event or variable fields and calls the
- * corresponding method to add these fields to the server.
- *
- * @param server UA_Server object that shall be configured
- * @param pdsIdent NodeId of the publishedDataSet, the DataSetFields belongs to
- * @param pdsParams publishedDataSet configuration */
 static UA_StatusCode
 createDataSetFields(UA_Server *server, const UA_NodeId *pdsIdent,
                     const UA_PublishedDataSetDataType *pdsParams) {
@@ -704,7 +627,7 @@ createDataSetFields(UA_Server *server, const UA_NodeId *pdsIdent,
        &UA_TYPES[UA_TYPES_PUBLISHEDDATAITEMSDATATYPE])
         return addDataSetFieldVariables(server, pdsIdent, pdsParams);
 
-    /* TODO: Implement Routine for adding Event DataSetFields */
+    
     if(pdsParams->dataSetSource.content.decoded.type ==
        &UA_TYPES[UA_TYPES_PUBLISHEDEVENTSDATATYPE]) {
         UA_LOG_ERROR(server->config.logging, UA_LOGCATEGORY_SERVER,
@@ -763,15 +686,13 @@ UA_PubSubManager_loadPubSubConfigFromByteString(UA_Server *server,
     return res;
 }
 
-/* Encodes a PubSubConfigurationDataType object as ByteString using the UA Binary Data
- * Encoding */
 static UA_StatusCode
 encodePubSubConfiguration(UA_Server *server,
                           UA_PubSubConfigurationDataType *configurationParameters,
                           UA_ByteString *buffer) {
     UA_UABinaryFileDataType binFile;
     memset(&binFile, 0, sizeof(UA_UABinaryFileDataType));
-    /*Perhaps, additional initializations of binFile are necessary here.*/
+    
 
     UA_Variant_setScalar(&binFile.body, configurationParameters,
                          &UA_TYPES[UA_TYPES_PUBSUBCONFIGURATIONDATATYPE]);
@@ -990,7 +911,7 @@ generateReaderGroupDataType(const UA_ReaderGroup *src,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Generates a PubSubConnectionDataType object from a PubSubConnection. */
+
 static UA_StatusCode
 generatePubSubConnectionDataType(UA_Server* server,
                                  const UA_PubSubConnection *src,
@@ -1039,8 +960,6 @@ generatePubSubConnectionDataType(UA_Server* server,
                              &src->config.publisherId.id,
                              publisherIdType);
 
-    /* Possibly, array size and dimensions of src->config->address and
-     * src->config->connectionTransportSettings should be checked beforehand. */
     dst->address.encoding = UA_EXTENSIONOBJECT_DECODED;
     dst->address.content.decoded.type = src->config.address.type;
     res = UA_Array_copy(src->config.address.data, 1,
@@ -1195,4 +1114,4 @@ UA_PubSubManager_getEncodedPubSubConfiguration(UA_Server *server,
     return res;
 }
 
-#endif /* UA_ENABLE_PUBSUB && UA_ENABLE_PUBSUB_FILE_CONFIG */
+#endif 

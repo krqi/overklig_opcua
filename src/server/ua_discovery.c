@@ -1,19 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2014-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2014, 2017 (c) Florian Palm
- *    Copyright 2015-2016, 2019 (c) Sten Grüner
- *    Copyright 2015 (c) Chris Iatrou
- *    Copyright 2015-2016 (c) Oleksiy Vasylyev
- *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Julian Grothoff
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) HMS Industrial Networks AB (Author: Jonas Green)
- */
 
-#include <open62541/client.h>
+#include <opcua/client.h>
 #include "ua_discovery.h"
 #include "ua_server_internal.h"
 
@@ -23,7 +9,7 @@ void
 UA_DiscoveryManager_setState(UA_Server *server,
                              UA_DiscoveryManager *dm,
                              UA_LifecycleState state) {
-    /* Check if open connections remain */
+    
     if(state == UA_LIFECYCLESTATE_STOPPING ||
        state == UA_LIFECYCLESTATE_STOPPED) {
         state = UA_LIFECYCLESTATE_STOPPED;
@@ -38,11 +24,11 @@ UA_DiscoveryManager_setState(UA_Server *server,
         }
     }
 
-    /* No change */
+    
     if(state == dm->sc.state)
         return;
 
-    /* Set the new state and notify */
+    
     dm->sc.state = state;
     if(dm->sc.notifyState)
         dm->sc.notifyState(server, &dm->sc, state);
@@ -87,23 +73,17 @@ UA_DiscoveryManager_free(UA_Server *server,
             currHash = nextHash;
         }
     }
-# endif /* UA_ENABLE_DISCOVERY_MULTICAST */
+# endif 
 
     UA_free(dm);
     return UA_STATUSCODE_GOOD;
 }
 
-/* Cleanup server registration: If the semaphore file path is set, then it just
- * checks the existence of the file. When it is deleted, the registration is
- * removed. If there is no semaphore file, then the registration will be removed
- * if it is older than 60 minutes. */
 static void
 UA_DiscoveryManager_cleanupTimedOut(UA_Server *server, void *data) {
     UA_EventLoop *el = server->config.eventLoop;
     UA_DiscoveryManager *dm = (UA_DiscoveryManager*)data;
 
-    /* TimedOut gives the last DateTime at which we must have seen the
-     * registered server. Otherwise it is timed out. */
     UA_DateTime timedOut = el->dateTime_nowMonotonic(el);
     if(server->config.discoveryCleanupTimeout)
         timedOut -= server->config.discoveryCleanupTimeout * UA_DATETIME_SEC;
@@ -152,7 +132,7 @@ UA_DiscoveryManager_cleanupTimedOut(UA_Server *server, void *data) {
     }
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
-    /* Send out multicast */
+    
     UA_DiscoveryManager_sendMulticastMessages(dm);
 #endif
 }
@@ -164,7 +144,7 @@ UA_DiscoveryManager_start(UA_Server *server,
         return UA_STATUSCODE_BADINTERNALERROR;
 
     UA_DiscoveryManager *dm = (UA_DiscoveryManager*)sc;
-    dm->server = server; /* Set the backpointer */
+    dm->server = server; 
 
     UA_StatusCode res =
         addRepeatedCallback(server, UA_DiscoveryManager_cleanupTimedOut,
@@ -190,7 +170,7 @@ UA_DiscoveryManager_stop(UA_Server *server,
     UA_DiscoveryManager *dm = (UA_DiscoveryManager*)sc;
     removeCallback(server, dm->discoveryCallbackId);
 
-    /* Cancel all outstanding register requests */
+    
     for(size_t i = 0; i < UA_MAXREGISTERREQUESTS; i++) {
         if(dm->registerRequests[i].client == NULL)
             continue;
@@ -215,7 +195,7 @@ UA_DiscoveryManager_new(UA_Server *server) {
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
     UA_EventLoop *el = server->config.eventLoop;
     dm->serverOnNetworkRecordIdLastReset = el->dateTime_now(el);
-#endif /* UA_ENABLE_DISCOVERY_MULTICAST */
+#endif 
 
     dm->sc.name = UA_STRING("discovery");
     dm->sc.start = UA_DiscoveryManager_start;
@@ -224,9 +204,9 @@ UA_DiscoveryManager_new(UA_Server *server) {
     return &dm->sc;
 }
 
-/********************************/
-/* Register at Discovery Server */
-/********************************/
+
+
+
 
 static void
 asyncRegisterRequest_clear(void *app, void *context) {
@@ -239,7 +219,7 @@ asyncRegisterRequest_clear(void *app, void *context) {
         UA_Client_delete(ar->client);
     memset(ar, 0, sizeof(asyncRegisterRequest));
 
-    /* The Discovery manager is fully stopped? */
+    
     UA_DiscoveryManager_setState(server, dm, dm->sc.state);
 }
 
@@ -272,8 +252,6 @@ setupRegisterRequest(asyncRegisterRequest *ar, UA_RequestHeader *rh,
     rs->serverNames = &sc->applicationDescription.applicationName;
     rs->serverNamesSize = 1;
 
-    /* Mirror the discovery URLs from the server config (includes hostnames from
-     * the network layers) */
     rs->discoveryUrls = sc->applicationDescription.discoveryUrls;
     rs->discoveryUrlsSize = sc->applicationDescription.discoveryUrlsSize;
 }
@@ -286,7 +264,7 @@ registerAsyncResponse(UA_Client *client, void *userdata,
     UA_Response *response = (UA_Response*)resp;
     const char *regtype = (ar->register2) ? "RegisterServer2" : "RegisterServer";
 
-    /* Success registering? */
+    
     if(response->responseHeader.serviceResult == UA_STATUSCODE_GOOD) {
         UA_LOG_INFO(sc->logging, UA_LOGCATEGORY_SERVER, "%s succeeded", regtype);
         goto done;
@@ -296,11 +274,9 @@ registerAsyncResponse(UA_Client *client, void *userdata,
                    "%s failed with statuscode %s", regtype,
                    UA_StatusCode_name(response->responseHeader.serviceResult));
 
-    /* Try RegisterServer next */
+    
     ar->register2 = false;
 
-    /* Try RegisterServer immediately if we can.
-     * Otherwise wait for the next state callback. */
     UA_SecureChannelState ss;
     UA_Client_getState(client, &ss, NULL, NULL);
     if(!ar->shutdown && ss == UA_SECURECHANNELSTATE_OPEN) {
@@ -323,8 +299,6 @@ registerAsyncResponse(UA_Client *client, void *userdata,
     return;
 
  done:
-    /* Close the client connection, will be cleaned up in the client state
-     * callback when closing is complete */
     ar->shutdown = true;
     UA_Client_disconnectSecureChannelAsync(ar->client);
 }
@@ -338,7 +312,7 @@ discoveryClientStateCallback(UA_Client *client,
         UA_Client_getContext(client);
     UA_ServerConfig *sc = &ar->dm->server->config;
 
-    /* Connection failed */
+    
     if(connectStatus != UA_STATUSCODE_GOOD) {
         if(connectStatus != UA_STATUSCODE_BADCONNECTIONCLOSED) {
             UA_LOG_ERROR(sc->logging, UA_LOGCATEGORY_SERVER,
@@ -346,27 +320,25 @@ discoveryClientStateCallback(UA_Client *client,
                          UA_StatusCode_name(connectStatus));
         }
 
-        /* Connection fully closed */
+        
         if(channelState == UA_SECURECHANNELSTATE_CLOSED) {
             if(!ar->connectSuccess || ar->shutdown) {
-                asyncRegisterRequest_clearAsync(ar); /* Clean up */
+                asyncRegisterRequest_clearAsync(ar); 
             } else {
                 ar->connectSuccess = false;
-                __UA_Client_connect(client, true);   /* Reconnect */
+                __UA_Client_connect(client, true);   
             }
         }
         return;
     }
 
-    /* Wait until the SecureChannel is open */
+    
     if(channelState != UA_SECURECHANNELSTATE_OPEN)
         return;
 
-    /* We have at least succeeded to connect */
+    
     ar->connectSuccess = true;
 
-    /* Is this the encrypted SecureChannel already? (We might have to wait for
-     * the second connection after the FindServers handshake */
     UA_MessageSecurityMode msm = UA_MESSAGESECURITYMODE_INVALID;
     UA_Client_getConnectionAttribute_scalar(client, UA_QUALIFIEDNAME(0, "securityMode"),
                                             &UA_TYPES[UA_TYPES_MESSAGESECURITYMODE],
@@ -385,7 +357,7 @@ discoveryClientStateCallback(UA_Client *client,
 #endif
     void *request;
 
-    /* Prepare the request. This does not allocate memory */
+    
     if(ar->register2) {
         UA_RegisterServer2Request_init(&reg2);
         setupRegisterRequest(ar, &reg2.requestHeader, &reg2.server);
@@ -394,8 +366,6 @@ discoveryClientStateCallback(UA_Client *client,
         request = &reg2;
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
-        /* Set the configuration that is only available for
-         * UA_RegisterServer2Request */
         UA_ExtensionObject_setValueNoDelete(&mdnsConfig, &sc->mdnsConfig,
                                             &UA_TYPES[UA_TYPES_MDNSDISCOVERYCONFIGURATION]);
         reg2.discoveryConfigurationSize = 1;
@@ -409,13 +379,11 @@ discoveryClientStateCallback(UA_Client *client,
         request = &reg1;
     }
 
-    /* Try to call RegisterServer2 */
+    
     UA_StatusCode res =
         __UA_Client_AsyncService(client, request, reqType, registerAsyncResponse,
                                  respType, ar, NULL);
     if(res != UA_STATUSCODE_GOOD) {
-        /* Close the client connection, will be cleaned up in the client state
-         * callback when closing is complete */
         UA_Client_disconnectSecureChannelAsync(ar->client);
         UA_LOG_ERROR(sc->logging, UA_LOGCATEGORY_CLIENT,
                      "RegisterServer2 failed with statuscode %s",
@@ -427,7 +395,7 @@ static UA_StatusCode
 UA_Server_register(UA_Server *server, UA_ClientConfig *cc, UA_Boolean unregister,
                    const UA_String discoveryServerUrl,
                    const UA_String semaphoreFilePath) {
-    /* Get the discovery manager */
+    
     UA_DiscoveryManager *dm = (UA_DiscoveryManager*)
         getServerComponentByName(server, UA_STRING("discovery"));
     if(!dm) {
@@ -435,7 +403,7 @@ UA_Server_register(UA_Server *server, UA_ClientConfig *cc, UA_Boolean unregister
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Check that the discovery manager is running */
+    
     UA_ServerConfig *sc = &server->config;
     if(dm->sc.state != UA_LIFECYCLESTATE_STARTED) {
         UA_LOG_ERROR(sc->logging, UA_LOGCATEGORY_SERVER,
@@ -444,7 +412,7 @@ UA_Server_register(UA_Server *server, UA_ClientConfig *cc, UA_Boolean unregister
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Find a free slot for storing the async request information */
+    
     asyncRegisterRequest *ar = NULL;
     for(size_t i = 0; i < UA_MAXREGISTERREQUESTS; i++) {
         if(dm->registerRequests[i].client == NULL) {
@@ -459,47 +427,45 @@ UA_Server_register(UA_Server *server, UA_ClientConfig *cc, UA_Boolean unregister
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Use the EventLoop from the server for the client */
+    
     if(cc->eventLoop && !cc->externalEventLoop)
         cc->eventLoop->free(cc->eventLoop);
     cc->eventLoop = sc->eventLoop;
     cc->externalEventLoop = true;
 
-    /* Set the state callback method and context */
+    
     cc->stateCallback = discoveryClientStateCallback;
     cc->clientContext = ar;
 
-    /* Use encryption by default */
+    
 #ifdef UA_ENABLE_ENCRYPTION
     cc->securityMode = UA_MESSAGESECURITYMODE_SIGNANDENCRYPT;
 #endif
 
-    /* Open only a SecureChannel */
+    
     cc->noSession = true;
 
-    /* Move the endpoint url */
+    
     UA_String_clear(&cc->endpointUrl);
     UA_String_copy(&discoveryServerUrl, &cc->endpointUrl);
 
-    /* Instantiate the client */
+    
     ar->client = UA_Client_newWithConfig(cc);
     if(!ar->client) {
         UA_ClientConfig_clear(cc);
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    /* Zero out the supplied config */
+    
     memset(cc, 0, sizeof(UA_ClientConfig));
 
-    /* Finish setting up the context */
+    
     ar->server = server;
     ar->dm = dm;
     ar->unregister = unregister;
-    ar->register2 = true; /* Try register2 first */
+    ar->register2 = true; 
     UA_String_copy(&semaphoreFilePath, &ar->semaphoreFilePath);
 
-    /* Connect asynchronously. The register service is called once the
-     * connection is open. */
     ar->connectSuccess = false;
     return __UA_Client_connect(ar->client, true);
 }
@@ -529,4 +495,4 @@ UA_Server_deregisterDiscovery(UA_Server *server, UA_ClientConfig *cc,
     return res;
 }
 
-#endif /* UA_ENABLE_DISCOVERY */
+#endif 

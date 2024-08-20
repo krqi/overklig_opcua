@@ -1,15 +1,8 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2017-2018 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2018 (c) Daniel Feist, Precitec GmbH & Co. KG
- */
 
 #ifndef UA_SECURITYPOLICIES_H_
 #define UA_SECURITYPOLICIES_H_
 
-#include <open62541/plugin/securitypolicy.h>
+#include <opcua/plugin/securitypolicy.h>
 
 _UA_BEGIN_DECLS
 
@@ -50,7 +43,7 @@ UA_SecurityPolicy_Aes256Sha256RsaPss(UA_SecurityPolicy *policy,
                                      const UA_ByteString localPrivateKey,
                                      const UA_Logger *logger);
 
-#ifdef __linux__ /* Linux only so far */
+#ifdef __linux__ 
 UA_EXPORT UA_StatusCode
 UA_SecurityPolicy_Filestore(UA_SecurityPolicy *policy,
                             UA_SecurityPolicy *innerPolicy,
@@ -79,4 +72,4 @@ UA_PubSubSecurityPolicy_Aes256CtrTPM(UA_PubSubSecurityPolicy *policy, char *user
 
 _UA_END_DECLS
 
-#endif /* UA_SECURITYPOLICIES_H_ */
+#endif 

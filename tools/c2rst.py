@@ -9,11 +9,11 @@ import re
 
 # Converts a header file to restructured text documentation
 #
-# All text in /** */ comments becomes restructured text. Everything else is
+# All text in  comments becomes restructured text. Everything else is
 # included as a code-block with C syntax highlighting.
 #
 # The beginning and end of the header are removed.
-# - Find the first /** */ comment -> start of the documentation
+# - Find the first  comment -> start of the documentation
 # - Find the last line beginning with "#ifdef" -> end of the documentation
 
 remove_keyword = [" UA_EXPORT", " UA_FUNC_ATTR_WARN_UNUSED_RESULT",

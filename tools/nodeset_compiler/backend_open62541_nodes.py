@@ -13,7 +13,7 @@
 
 from datatypes import  ExtensionObject, NodeId, StatusCode, DiagnosticInfo, Value
 from nodes import ReferenceTypeNode, ObjectNode, VariableNode, VariableTypeNode, MethodNode, ObjectTypeNode, DataTypeNode, ViewNode
-from backend_open62541_datatypes import makeCIdentifier, generateLocalizedTextCode, generateQualifiedNameCode, generateNodeIdCode, \
+from backend_opcua_datatypes import makeCIdentifier, generateLocalizedTextCode, generateQualifiedNameCode, generateNodeIdCode, \
     generateExpandedNodeIdCode, generateNodeValueCode
 import re
 import logging
@@ -163,7 +163,7 @@ def generateCommonVariableCode(node, nodeset):
     if node.valueRank is None:
         # Set the constrained value rank from the type/parent node
         setNodeValueRankRecursive(node, nodeset)
-        code.append("/* Value rank inherited */")
+        code.append("")
 
     code.append("attr.valueRank = %d;" % node.valueRank)
     if node.valueRank > 0:
@@ -184,7 +184,7 @@ def generateCommonVariableCode(node, nodeset):
         # TypeDefinitionNode from which they are instantiated, with the exceptions of the NodeClass and
         # NodeId."
         setNodeDatatypeRecursive(node, nodeset)
-        code.append("/* DataType inherited */")
+        code.append("")
 
     dataTypeNode = nodeset.getBaseDataType(nodeset.getDataTypeNode(node.dataType))
 
@@ -216,7 +216,7 @@ def generateCommonVariableCode(node, nodeset):
                     code.append("attr.value.arrayDimensionsSize = attr.arrayDimensionsSize;")
                     code.append("attr.value.arrayDimensions = attr.arrayDimensions;")
     elif node.value is not None:
-        code.append("/* Cannot encode the value */")
+        code.append("")
         logger.warn("Cannot encode dataTypeNode: " + dataTypeNode.browseName.name + " for value of node " + node.browseName.name + " " + str(node.id))
 
     return [code, codeCleanup, codeGlobal]

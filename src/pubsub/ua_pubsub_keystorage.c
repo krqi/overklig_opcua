@@ -1,14 +1,7 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2019 ifak e.V. Magdeburg (Holger Zipper)
- * Copyright (c) 2022 Linutronix GmbH (Author: Muddasir Shakil)
- */
 
 #include "ua_pubsub_keystorage.h"
 
-#ifdef UA_ENABLE_PUBSUB_SKS /* conditional compilation */
+#ifdef UA_ENABLE_PUBSUB_SKS 
 
 #define UA_REQ_CURRENT_TOKEN 0
 
@@ -67,7 +60,7 @@ UA_PubSubKeyStorage_delete(UA_Server *server, UA_PubSubKeyStorage *keyStorage) {
 
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Remove callback */
+    
     if(!keyStorage->callBackId) {
         removeCallback(server, keyStorage->callBackId);
         keyStorage->callBackId = 0;
@@ -94,7 +87,7 @@ UA_PubSubKeyStorage_init(UA_Server *server, UA_PubSubKeyStorage *keyStorage,
     keyStorage->maxKeyListSize = maxPastKeyCount + currentkeyCount + maxFutureKeyCount;
     keyStorage->policy = policy;
 
-    /* Add this keystorage to the server keystoragelist */
+    
     LIST_INSERT_HEAD(&server->pubSubManager.pubSubKeyList, keyStorage, keyStorageList);
 
     return UA_STATUSCODE_GOOD;
@@ -139,7 +132,7 @@ UA_PubSubKeyStorage_storeSecurityKeys(UA_Server *server, UA_PubSubKeyStorage *ke
     for(size_t i = 0; i < keyNumber; ++i) {
         retval = UA_PubSubKeyStorage_getKeyByKeyID(
             startingTokenID, keyStorage, &keyListIterator);
-        /*Skipping key with matching KeyID in existing list*/
+        
         if(retval == UA_STATUSCODE_BADNOTFOUND) {
             keyListIterator = UA_PubSubKeyStorage_push(keyStorage, &futureKeys[i], startingTokenID);
             if(!keyListIterator)
@@ -153,7 +146,7 @@ UA_PubSubKeyStorage_storeSecurityKeys(UA_Server *server, UA_PubSubKeyStorage *ke
             ++startingTokenID;
     }
 
-    /*update keystorage references*/
+    
     retval = UA_PubSubKeyStorage_getKeyByKeyID(currentTokenId, keyStorage, &keyStorage->currentItem);
     if (retval != UA_STATUSCODE_GOOD && !keyStorage->currentItem)
         goto error;
@@ -230,19 +223,19 @@ splitCurrentKeyMaterial(UA_PubSubKeyStorage *keyStorage, UA_ByteString *signingK
 
     UA_ByteString key = keyStorage->currentItem->key;
 
-    /*Check the main key length is the same according to policy*/
+    
     if(key.length != policy->symmetricModule.secureChannelNonceLength)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /*Get Key Length according to policy*/
+    
     size_t signingkeyLength =
         policy->symmetricModule.cryptoModule.signatureAlgorithm.getLocalKeyLength(NULL);
     size_t encryptkeyLength =
         policy->symmetricModule.cryptoModule.encryptionAlgorithm.getLocalKeyLength(NULL);
-    /*Rest of the part is the keyNonce*/
+    
     size_t keyNonceLength = key.length - signingkeyLength - encryptkeyLength;
 
-    /*DivideKeys in origin ByteString*/
+    
     signingKey->data = key.data;
     signingKey->length = signingkeyLength;
 
@@ -280,11 +273,8 @@ setPubSubGroupEncryptingKeyForMatchingSecurityGroupId(UA_Server *server,
     UA_StatusCode retval = UA_STATUSCODE_BAD;
     UA_PubSubConnection *tmpPubSubConnections;
 
-    /* Key storage is the same for all reader / writer groups, channel context isn't
-     * => Update channelcontext in all Writergroups / ReaderGroups which have the same
-     * securityGroupId*/
     TAILQ_FOREACH(tmpPubSubConnections, &server->pubSubManager.connections, listEntry) {
-        /* For each writerGroup in server with matching SecurityGroupId */
+        
         UA_WriterGroup *tmpWriterGroup;
         LIST_FOREACH(tmpWriterGroup, &tmpPubSubConnections->writerGroups, listEntry) {
             if(UA_String_equal(&tmpWriterGroup->config.securityGroupId, &securityGroupId)) {
@@ -296,7 +286,7 @@ setPubSubGroupEncryptingKeyForMatchingSecurityGroupId(UA_Server *server,
             }
         }
 
-        /* For each readerGroup in server with matching SecurityGroupId */
+        
         UA_ReaderGroup *tmpReaderGroup;
         LIST_FOREACH(tmpReaderGroup, &tmpPubSubConnections->readerGroups, listEntry) {
             if(UA_String_equal(&tmpReaderGroup->config.securityGroupId, &securityGroupId)) {
@@ -328,7 +318,7 @@ UA_PubSubKeyStorage_activateKeyToChannelContext(UA_Server *server, UA_NodeId pub
 
     UA_UInt32 securityTokenId = keyStorage->currentItem->keyID;
 
-    /*DivideKeys in origin ByteString*/
+    
     UA_ByteString signingKey;
     UA_ByteString encryptKey;
     UA_ByteString keyNonce;
@@ -370,7 +360,7 @@ nextGetSecuritykeysCallback(UA_Server *server, UA_PubSubKeyStorage *keyStorage) 
 
 void
 UA_PubSubKeyStorage_keyRolloverCallback(UA_Server *server, UA_PubSubKeyStorage *keyStorage) {
-    /* Callbacks from the EventLoop are initially unlocked */
+    
     UA_LOCK(&server->serviceMutex);
     UA_StatusCode retval =
         UA_PubSubKeyStorage_addKeyRolloverCallback(server, keyStorage,
@@ -395,7 +385,7 @@ UA_PubSubKeyStorage_keyRolloverCallback(UA_Server *server, UA_PubSubKeyStorage *
     } else if(keyStorage->sksConfig.endpointUrl && keyStorage->sksConfig.reqId == 0) {
         UA_EventLoop *el = server->config.eventLoop;
         UA_DateTime now = el->dateTime_nowMonotonic(el);
-        /*Publishers using a central SKS shall call GetSecurityKeys at a period of half the KeyLifetime */
+        
         UA_Duration msTimeToNextGetSecurityKeys = keyStorage->keyLifeTime / 2;
         UA_DateTime dateTimeToNextGetSecurityKeys =
             now + (UA_DateTime)(UA_DATETIME_MSEC * msTimeToNextGetSecurityKeys);
@@ -419,20 +409,18 @@ UA_PubSubKeyStorage_update(UA_Server *server, UA_PubSubKeyStorage *keyStorage,
     UA_PubSubKeyListItem *keyListIterator = NULL;
 
     if(currentKeyID != 0){
-        /* If currentKeyId is known then update keystorage currentItem */
+        
         retval = UA_PubSubKeyStorage_getKeyByKeyID(currentKeyID, keyStorage,
                                                    &keyListIterator);
         if(retval == UA_STATUSCODE_GOOD && keyListIterator) {
             keyStorage->currentItem = keyListIterator;
-            /* Add new keys at the end of KeyList */
+            
             retval = UA_PubSubKeyStorage_storeSecurityKeys(server, keyStorage, currentKeyID,
                                                            NULL, futureKeys, futureKeySize,
                                                            msKeyLifeTime);
             if(retval != UA_STATUSCODE_GOOD)
                 return retval;
         } else if(retval == UA_STATUSCODE_BADNOTFOUND) {
-            /* If the CurrentTokenId is unknown, the existing list shall be
-             * discarded and replaced by the fetched list */
             UA_PubSubKeyStorage_clearKeyList(keyStorage);
             retval = UA_PubSubKeyStorage_storeSecurityKeys(server, keyStorage,
                                                            currentKeyID, currentKey, futureKeys,
@@ -455,10 +443,6 @@ UA_PubSubKeyStorage_detachKeyStorage(UA_Server *server, UA_PubSubKeyStorage *key
     }
 }
 
-/**
- * @brief It holds the information required in the async callback to
- * GetSecurityKeys method Call.
- */
 typedef struct {
     UA_Server *server;
     UA_PubSubKeyStorage *ks;
@@ -471,7 +455,7 @@ static void sksClientCleanupCb(void *client, void *context);
 
 static void
 addDelayedSksClientCleanupCb(UA_Client *client, sksClientContext *context) {
-    /* Register at most once */
+    
     if(context->dc.application != NULL)
         return;
     context->dc.application = client;
@@ -485,7 +469,7 @@ sksClientCleanupCb(void *client, void *context) {
     UA_Client *sksClient = (UA_Client *)client;
     sksClientContext *ctx = (sksClientContext*)context;
 
-    /* we do not want to call state change Callback when cleaning up */
+    
     sksClient->config.stateCallback = NULL;
 
     if(sksClient->sessionState > UA_SESSIONSTATE_CLOSED &&
@@ -497,9 +481,6 @@ sksClientCleanupCb(void *client, void *context) {
     }
 
     if(sksClient->channel.state == UA_SECURECHANNELSTATE_CLOSED) {
-        /* We cannot make deep copy of the following pointers because these have
-         * internal structures, therefore we do not free them here. These will
-         * be freed in UA_PubSubKeyStorage_delete. */
         sksClient->config.securityPolicies = NULL;
         sksClient->config.securityPoliciesSize = 0;
         sksClient->config.certificateVerification.context = NULL;
@@ -523,7 +504,7 @@ storeFetchedKeys(UA_Client *client, void *userdata, UA_UInt32 requestId,
     UA_StatusCode retval = response->responseHeader.serviceResult;
 
     UA_LOCK(&server->serviceMutex);
-    /* check if the call to getSecurityKeys was a success */
+    
     if(response->resultsSize != 0)
         retval = response->results->statusCode;
     if(retval != UA_STATUSCODE_GOOD) {
@@ -560,12 +541,6 @@ storeFetchedKeys(UA_Client *client, void *userdata, UA_UInt32 requestId,
             goto cleanup;
     }
 
-    /**
-     * After a new batch of keys is fetched from SKS server, the key storage is updated
-     * with new keys and new keylifetime. Also the remaining time for current
-     * keyRollover is also returned. When setting a new keyRollover callback, the
-     * previous callback must be removed so that the keyRollover does not happen twice
-     */
     if(ks->callBackId != 0) {
         server->config.eventLoop->removeCyclicCallback(server->config.eventLoop,
                                                        ks->callBackId);
@@ -586,7 +561,7 @@ cleanup:
                      "Failed to store the fetched keys from SKS server with error: %s",
                      UA_StatusCode_name(retval));
     }
-    /* call user callback to notify about the status */
+    
     UA_UNLOCK(&server->serviceMutex);
     if(ks->sksConfig.userNotifyCallback)
         ks->sksConfig.userNotifyCallback(server, retval, ks->sksConfig.context);
@@ -640,7 +615,7 @@ onConnect(UA_Client *client, UA_SecureChannelState channelState,
         }
     }
     if(triggerSKSCleanup) {
-        /* call user callback to notify about the status */
+        
         sksClientContext *ctx = (sksClientContext *)client->config.clientContext;
         UA_PubSubKeyStorage *ks = ctx->ks;
         if(ks->sksConfig.userNotifyCallback)
@@ -673,14 +648,14 @@ getSecurityKeysAndStoreFetchedKeys(UA_Server *server, UA_PubSubKeyStorage *keySt
     UA_ClientConfig cc;
     memset(&cc, 0, sizeof(UA_ClientConfig));
 
-    /* over write the client config with user specified SKS config */
+    
     retval = UA_ClientConfig_copy(&keyStorage->sksConfig.clientConfig, &cc);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
     setServerEventloopOnSksClient(&cc, server->config.eventLoop);
 
-    /* this is cleanedup in sksClientCleanupCb */
+    
     sksClientContext *ctx   = (sksClientContext *)UA_calloc(1, sizeof(sksClientContext));
     if(!ctx)
          return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -693,21 +668,19 @@ getSecurityKeysAndStoreFetchedKeys(UA_Server *server, UA_PubSubKeyStorage *keySt
     UA_Client *client = UA_Client_newWithConfig(&cc);
     if(!client)
         return retval;
-    /* connect to sks server */
+    
     retval = UA_Client_connectAsync(client, keyStorage->sksConfig.endpointUrl);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_LOG_ERROR(client->config.logging, UA_LOGCATEGORY_CLIENT,
                      "Failed to connect SKS server with error: %s ",
                      UA_StatusCode_name(retval));
-        /* Make sure the client channel state is closed and not fresh, otherwise, eventloop will
-        keep waiting for the client status to go from Fresh to closed in UA_Client_delete*/
         client->channel.state = UA_SECURECHANNELSTATE_CLOSED;
-        /* this client instance will be cleared in the next event loop iteration */
+        
         addDelayedSksClientCleanupCb(client, ctx);
         return retval;
     }
 
-    /* add user specified callback, if the client is properly configured. */
+    
     client->config.stateCallback = onConnect;
 
     return retval;
@@ -729,7 +702,7 @@ UA_Server_setSksClient(UA_Server *server, UA_String securityGroupId,
     }
 
     UA_ClientConfig_copy(clientConfig, &ks->sksConfig.clientConfig);
-    /*Clear the content of original config, so that no body can access the original config */
+    
     clientConfig->authSecurityPolicies = NULL;
     clientConfig->certificateVerification.context = NULL;
     clientConfig->eventLoop = NULL;
@@ -740,7 +713,7 @@ UA_Server_setSksClient(UA_Server *server, UA_String securityGroupId,
     ks->sksConfig.endpointUrl = endpointUrl;
     ks->sksConfig.userNotifyCallback = callback;
     ks->sksConfig.context = context;
-    /* if keys are not previously fetched, then first call GetSecurityKeys*/
+    
     if(ks->keyListSize == 0) {
         retval = getSecurityKeysAndStoreFetchedKeys(server, ks);
     }

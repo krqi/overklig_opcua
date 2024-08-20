@@ -1,15 +1,4 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2023-2024 (c) Fraunhofer IOSB (Author: Florian Düwel)
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
-/* The C code is generated as follows: lemon -l ua_eventfilter_grammar.y
- *
- * Attention! Don't forget to copy the generated token identifiers from
- * ua_eventfilter_grammar.h into ua_eventfilter_parser.h. */
 
 %name UA_EventFilterParse
 %token_prefix EF_TOK_
@@ -25,13 +14,13 @@
 %right UNARY_OP .
 
 %include {
-#include <open62541/util.h>
+#include <opcua/util.h>
 #include "ua_eventfilter_parser.h"
 
 #define UA_EventFilterParse_ENGINEALWAYSONSTACK 1
 #define NDEBUG 1
 
-/* Declare methods to prevent errors due to missing "static" keyword */
+
 static void UA_EventFilterParseInit(void *);
 static void UA_EventFilterParseFinalize(void *p);
 int UA_EventFilterParseFallback(int iToken);
@@ -75,7 +64,7 @@ namedOperandAssignment ::= NAMEDOPERAND(NAME) COLONEQUAL operand(OP) . { OP->ref
 
 %code {
 
-/* Main method driving the generated parser from the lexer */
+
 UA_StatusCode
 UA_EventFilter_parse(UA_EventFilter *filter, UA_ByteString content,
                      UA_EventFilterParserOptions *options) {
@@ -93,17 +82,17 @@ UA_EventFilter_parse(UA_EventFilter *filter, UA_ByteString content,
     int tokenId = 0;
     UA_StatusCode res;
     do {
-        /* Skip whitespace */
+        
         res = UA_EventFilter_skip(content, &pos, &ctx);
         if(res != UA_STATUSCODE_GOOD)
             goto done;
 
-        /* Get the next token */
+        
         size_t begin = pos;
         tokenId = UA_EventFilter_lex(content, &pos, &ctx, &token);
         UA_EventFilterParse(&parser, tokenId, token, &ctx);
 
-        /* Print an error if the parser could not handle the token */
+        
         if(ctx.error != UA_STATUSCODE_GOOD) {
             pos2lines(content, begin, &line, &col);
             int extractLen = 10;
@@ -117,13 +106,11 @@ UA_EventFilter_parse(UA_EventFilter *filter, UA_ByteString content,
         }
     } while(tokenId);
 
-    /* Skip trailing whitespace */
+    
     res = UA_EventFilter_skip(content, &pos, &ctx);
     if(res != UA_STATUSCODE_GOOD)
         goto done;
 
-    /* The lexer stopped before the end of the input.
-     * The token could not be read. */
     if(pos < content.length) {
         pos2lines(content, pos, &line, &col);
         UA_LOG_ERROR(ctx.logger, UA_LOGCATEGORY_USERLAND,
@@ -133,7 +120,7 @@ UA_EventFilter_parse(UA_EventFilter *filter, UA_ByteString content,
         goto done;
     }
 
-    /* Create the filter from the parse-tree */
+    
     UA_EventFilter_init(filter);
     res = create_filter(&ctx, filter);
 

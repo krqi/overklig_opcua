@@ -1,21 +1,7 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2020 (c) Wind River Systems, Inc.
- *    Copyright 2020 (c) basysKom GmbH
- *    Copyright 2022 (c) Wind River Systems, Inc.
- *    Copyright 2022 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-/*
-modification history
---------------------
-01feb20,lan  written
-*/
 
-#include <open62541/plugin/securitypolicy_default.h>
-#include <open62541/util.h>
+#include <opcua/plugin/securitypolicy_default.h>
+#include <opcua/util.h>
 
 #if defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL)
 
@@ -32,34 +18,28 @@ modification history
 
 #include "securitypolicy_common.h"
 
-#define SHA1_DIGEST_LENGTH 20          /* 160 bits */
-#define RSA_DECRYPT_BUFFER_LENGTH 2048 /* bytes */
+#define SHA1_DIGEST_LENGTH 20          
+#define RSA_DECRYPT_BUFFER_LENGTH 2048 
 
-/* Cast to prevent warnings in LibreSSL */
+
 #define SHA256EVP() ((EVP_MD *)(uintptr_t)EVP_sha256())
 
 
-/** P_SHA256 Context */
+
 typedef struct UA_Openssl_P_SHA256_Ctx_ {
     size_t  seedLen;
     size_t  secretLen;
-    UA_Byte   A[32]; /* 32 bytes of SHA256 output */
-    /*
-    char seed[seedLen];
-    char secret[secretLen]; */
+    UA_Byte   A[32]; 
 } UA_Openssl_P_SHA256_Ctx;
 
 #define UA_Openssl_P_SHA256_SEED(ctx)   ((ctx)->A+32)
 #define UA_Openssl_P_SHA256_SECRET(ctx) ((ctx)->A+32+(ctx)->seedLen)
 
-/** P_SHA1 Context */
+
 typedef struct UA_Openssl_P_SHA1_Ctx_ {
     size_t  seedLen;
     size_t  secretLen;
-    UA_Byte A[SHA1_DIGEST_LENGTH];  /* 20 bytes of SHA1 output */
-    /*
-    char seed[seedLen];
-    char secret[secretLen]; */
+    UA_Byte A[SHA1_DIGEST_LENGTH];  
 } UA_Openssl_P_SHA1_Ctx;
 
 #define UA_Openssl_P_SHA1_SEED(ctx)   ((ctx)->A + SHA1_DIGEST_LENGTH)
@@ -67,13 +47,13 @@ typedef struct UA_Openssl_P_SHA1_Ctx_ {
 
 void
 UA_Openssl_Init (void) {
-    /* VxWorks7 has initialized the openssl. */
+    
 #ifndef __VXWORKS__
     static UA_Int16 bInit = 0;
     if (bInit == 1)
         return;
 #if defined(OPENSSL_API_COMPAT) && (OPENSSL_API_COMPAT < 0x10100000L)
-    /* only needed, if OpenSSL < V1.1 */
+    
     OpenSSL_add_all_algorithms ();
     ERR_load_crypto_strings ();
 #endif
@@ -89,9 +69,6 @@ static int UA_OpenSSL_RSA_Key_Size (EVP_PKEY * key){
 #endif
 }
 
-/* UA_copyCertificate - allocalte the buffer, copy the certificate and
- * add a NULL to the end
- */
 
 UA_StatusCode
 UA_copyCertificate (UA_ByteString * dst,
@@ -186,7 +163,7 @@ UA_OpenSSL_RSA_PSS_SHA256_Verify (const UA_ByteString * msg,
                                          RSA_PKCS1_PSS_PADDING, signature);
 }
 
-/* Get certificate thumbprint, and allocate the buffer. */
+
 
 UA_StatusCode
 UA_Openssl_X509_GetCertificateThumbprint (const UA_ByteString * certficate,
@@ -274,9 +251,9 @@ UA_Openssl_RSA_Private_Decrypt (UA_ByteString *      data,
     while (cipherOffset < data->length) {
         decryptedBytes = RSA_DECRYPT_BUFFER_LENGTH;
         opensslRet = EVP_PKEY_decrypt (ctx,
-                           buf,                       /* where to decrypt */
+                           buf,                       
                            &decryptedBytes,
-                           data->data + cipherOffset, /* what to decrypt  */
+                           data->data + cipherOffset, 
                            keySize
                            );
         if (opensslRet != 1) {
@@ -358,7 +335,7 @@ UA_Openssl_RSA_Public_Encrypt  (const UA_ByteString * message,
         }
     }
 
-    /* get the encrypted block size */
+    
 
     keySize = (size_t) UA_OpenSSL_RSA_Key_Size (evpPublicKey);
     if (keySize == 0) {
@@ -381,7 +358,7 @@ UA_Openssl_RSA_Public_Encrypt  (const UA_ByteString * message,
             break;
     }
 
-    /* encrypt in reverse order so that [data] may alias [encrypted] */
+    
 
     dataPos =  message->length;
     encryptedPos = ((dataPos - 1) / encryptedBlockSize + 1) * keySize;
@@ -465,8 +442,6 @@ P_SHA256_Ctx_Create (const UA_ByteString *  secret,
     ctx->seedLen = seed->length;
     (void) memcpy (UA_Openssl_P_SHA256_SEED(ctx), seed->data, seed->length);
     (void) memcpy (UA_Openssl_P_SHA256_SECRET(ctx), secret->data, secret->length);
-    /* A(0) = seed
-       A(n) = HMAC_HASH(secret, A(n-1)) */
 
     if (HMAC (EVP_sha256(), secret->data, (int) secret->length, seed->data,
         seed->length, ctx->A, NULL) == NULL) {
@@ -481,13 +456,13 @@ static UA_StatusCode
 P_SHA256_Hash_Generate (UA_Openssl_P_SHA256_Ctx * ctx,
                         UA_Byte *                 pHas
                         ) {
-    /* Calculate P_SHA256(n) = HMAC_SHA256(secret, A(n)+seed) */
+    
     if (HMAC (EVP_sha256(),UA_Openssl_P_SHA256_SECRET(ctx), (int) ctx->secretLen,
         ctx->A, sizeof (ctx->A) + ctx->seedLen, pHas, NULL) == NULL) {
             return UA_STATUSCODE_BADINTERNALERROR;
         }
 
-    /* Calculate A(n) = HMAC_SHA256(secret, A(n-1)) */
+    
    if (HMAC (EVP_sha256(),UA_Openssl_P_SHA256_SECRET(ctx), (int) ctx->secretLen,
         ctx->A, sizeof (ctx->A), ctx->A, NULL) == NULL) {
             return UA_STATUSCODE_BADINTERNALERROR;
@@ -531,7 +506,7 @@ UA_Openssl_Random_Key_PSHA256_Derive (const UA_ByteString *     secret,
     return UA_STATUSCODE_GOOD;
 }
 
-/* return the key bytes */
+
 UA_StatusCode
 UA_Openssl_RSA_Public_GetKeyLength (X509 *     publicKeyX509,
                                     UA_Int32 * keyLen) {
@@ -667,7 +642,7 @@ static UA_StatusCode
 UA_OpenSSL_Decrypt (const UA_ByteString * iv,
                     const UA_ByteString * key,
                     const EVP_CIPHER *    cipherAlg,
-                    UA_ByteString *       data  /* [in/out]*/) {
+                    UA_ByteString *       data  ) {
     UA_ByteString    ivCopy    = {0, NULL};
     UA_ByteString    cipherTxt = {0, NULL};
     EVP_CIPHER_CTX * ctx       = NULL;
@@ -676,7 +651,7 @@ UA_OpenSSL_Decrypt (const UA_ByteString * iv,
     int              outLen;
     int              tmpLen;
 
-    /* copy the IV because the AES_cbc_encrypt function overwrites it. */
+    
 
     ret = UA_ByteString_copy (iv, &ivCopy);
     if (ret != UA_STATUSCODE_GOOD) {
@@ -694,16 +669,13 @@ UA_OpenSSL_Decrypt (const UA_ByteString * iv,
         goto errout;
     }
 
-    /* call EVP_* to decrypt */
+    
 
     opensslRet = EVP_DecryptInit_ex (ctx, cipherAlg, NULL, key->data, ivCopy.data);
     if (opensslRet != 1) {
         ret = UA_STATUSCODE_BADINTERNALERROR;
         goto errout;
     }
-    /* EVP_DecryptFinal() will return an error code if padding is enabled
-     * and the final block is not correctly formatted.
-     */
     EVP_CIPHER_CTX_set_padding (ctx, 0);
     opensslRet = EVP_DecryptUpdate (ctx, data->data, &outLen,
                                     cipherTxt.data, (int) cipherTxt.length);
@@ -733,7 +705,7 @@ static UA_StatusCode
 UA_OpenSSL_Encrypt (const UA_ByteString * iv,
                     const UA_ByteString * key,
                     const EVP_CIPHER *    cipherAlg,
-                    UA_ByteString *       data  /* [in/out]*/
+                    UA_ByteString *       data  
                     ) {
 
     UA_ByteString    ivCopy   = {0, NULL};
@@ -744,7 +716,7 @@ UA_OpenSSL_Encrypt (const UA_ByteString * iv,
     int              outLen;
     int              tmpLen;
 
-    /* copy the IV because the AES_cbc_encrypt function overwrites it. */
+    
 
     ret = UA_ByteString_copy (iv, &ivCopy);
     if (ret != UA_STATUSCODE_GOOD) {
@@ -762,7 +734,7 @@ UA_OpenSSL_Encrypt (const UA_ByteString * iv,
         goto errout;
     }
 
-    /* call EVP_* to encrypt */
+    
 
     opensslRet = EVP_EncryptInit_ex (ctx, cipherAlg, NULL, key->data, ivCopy.data);
     if (opensslRet != 1) {
@@ -770,8 +742,6 @@ UA_OpenSSL_Encrypt (const UA_ByteString * iv,
         goto errout;
     }
 
-    /* Disable padding. Padding is done in the stack before calling encryption.
-     * Ensure that we have a multiple of the block size */
     if(data->length % (size_t)EVP_CIPHER_CTX_block_size(ctx)) {
         ret = UA_STATUSCODE_BADINTERNALERROR;
         goto errout;
@@ -782,7 +752,7 @@ UA_OpenSSL_Encrypt (const UA_ByteString * iv,
         goto errout;
     }
 
-    /* Encrypt the data */
+    
     opensslRet = EVP_EncryptUpdate (ctx, data->data, &outLen,
                                     plainTxt.data, (int) plainTxt.length);
     if (opensslRet != 1) {
@@ -790,7 +760,7 @@ UA_OpenSSL_Encrypt (const UA_ByteString * iv,
         goto errout;
     }
 
-    /* Encrypt-final does nothing as padding is disabled */
+    
     opensslRet = EVP_EncryptFinal_ex(ctx, data->data + outLen, &tmpLen);
     if (opensslRet != 1) {
         ret = UA_STATUSCODE_BADINTERNALERROR;
@@ -812,7 +782,7 @@ errout:
 UA_StatusCode
 UA_OpenSSL_AES_256_CBC_Decrypt (const UA_ByteString * iv,
                                 const UA_ByteString * key,
-                                UA_ByteString *       data  /* [in/out]*/
+                                UA_ByteString *       data  
                                 ) {
     return UA_OpenSSL_Decrypt (iv, key, EVP_aes_256_cbc (), data);
 }
@@ -820,7 +790,7 @@ UA_OpenSSL_AES_256_CBC_Decrypt (const UA_ByteString * iv,
 UA_StatusCode
 UA_OpenSSL_AES_256_CBC_Encrypt (const UA_ByteString * iv,
                             const UA_ByteString * key,
-                            UA_ByteString *       data  /* [in/out]*/
+                            UA_ByteString *       data  
                             ) {
     return UA_OpenSSL_Encrypt (iv, key, EVP_aes_256_cbc (), data);
 }
@@ -870,8 +840,6 @@ P_SHA1_Ctx_Create (const UA_ByteString *  secret,
     ctx->seedLen = seed->length;
     (void) memcpy (UA_Openssl_P_SHA1_SEED(ctx), seed->data, seed->length);
     (void) memcpy (UA_Openssl_P_SHA1_SECRET(ctx), secret->data, secret->length);
-    /* A(0) = seed
-       A(n) = HMAC_HASH(secret, A(n-1)) */
 
     if (HMAC (EVP_sha1(), secret->data, (int) secret->length, seed->data,
         seed->length, ctx->A, NULL) == NULL) {
@@ -886,13 +854,13 @@ static UA_StatusCode
 P_SHA1_Hash_Generate (UA_Openssl_P_SHA1_Ctx * ctx,
                       UA_Byte *               pHas
                       ) {
-    /* Calculate P_SHA1(n) = HMAC_SHA1(secret, A(n)+seed) */
+    
     if (HMAC (EVP_sha1 (), UA_Openssl_P_SHA1_SECRET(ctx), (int) ctx->secretLen,
         ctx->A, sizeof (ctx->A) + ctx->seedLen, pHas, NULL) == NULL) {
             return UA_STATUSCODE_BADINTERNALERROR;
         }
 
-    /* Calculate A(n) = HMAC_SHA1(secret, A(n-1)) */
+    
    if (HMAC (EVP_sha1(), UA_Openssl_P_SHA1_SECRET(ctx), (int) ctx->secretLen,
         ctx->A, sizeof (ctx->A), ctx->A, NULL) == NULL) {
             return UA_STATUSCODE_BADINTERNALERROR;
@@ -997,7 +965,7 @@ UA_Openssl_RSA_PKCS1_V15_Encrypt (UA_ByteString * data,
 UA_StatusCode
 UA_OpenSSL_AES_128_CBC_Decrypt (const UA_ByteString * iv,
                                 const UA_ByteString * key,
-                                UA_ByteString *       data  /* [in/out]*/
+                                UA_ByteString *       data  
                                 ) {
     return UA_OpenSSL_Decrypt (iv, key, EVP_aes_128_cbc (), data);
 }
@@ -1005,7 +973,7 @@ UA_OpenSSL_AES_128_CBC_Decrypt (const UA_ByteString * iv,
 UA_StatusCode
 UA_OpenSSL_AES_128_CBC_Encrypt (const UA_ByteString * iv,
                                 const UA_ByteString * key,
-                                UA_ByteString *       data  /* [in/out]*/
+                                UA_ByteString *       data  
                                 ) {
     return UA_OpenSSL_Encrypt (iv, key, EVP_aes_128_cbc (), data);
 }
@@ -1021,10 +989,10 @@ UA_OpenSSL_X509_AddSubjectAttributes(const UA_String* subject, X509_NAME* name) 
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* split string into tokens */
+    
     char *token = strtok(subj, "/,");
     while(token != NULL) {
-        /* find delimiter in attribute */
+        
         size_t delim = 0;
         for(size_t idx = 0; idx < strlen(token); idx++) {
             if(token[idx] == '=') {
@@ -1040,14 +1008,14 @@ UA_OpenSSL_X509_AddSubjectAttributes(const UA_String* subject, X509_NAME* name) 
         token[delim] = '\0';
         const unsigned char *para = (const unsigned char*)&token[delim+1];
 
-        /* add attribute to X509_NAME */
+        
         int result = X509_NAME_add_entry_by_txt(name, token, MBSTRING_UTF8, para, -1, -1, 0);
         if(!result) {
             retval = UA_STATUSCODE_BADINTERNALERROR;
             goto cleanup;
         }
 
-        /* get next token */
+        
         token = strtok(NULL, "/,");
     }
 
@@ -1083,16 +1051,14 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
                                 const UA_ByteString *nonce,
                                 UA_ByteString *csr,
                                 UA_ByteString *newPrivateKey) {
-    /* Check parameter */
+    
     if(!securityPolicy || !csr || !localPrivateKey) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
     EVP_PKEY_free(*csrLocalPrivateKey);
-    /* CSR has already been generated and private key only needs to be set
-     * if a new one has been generated. */
     if(newPrivateKey && newPrivateKey->length > 0) {
-        /* Set the private key */
+        
         *csrLocalPrivateKey = UA_OpenSSL_LoadPrivateKey(newPrivateKey);
         if(!(*csrLocalPrivateKey))
             return UA_STATUSCODE_BADINTERNALERROR;
@@ -1105,33 +1071,31 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Get X509 certificate */
+    
     X509 *x509Certificate = UA_OpenSSL_LoadCertificate(&securityPolicy->localCertificate);
     if(!x509Certificate)
         return UA_STATUSCODE_BADCERTIFICATEINVALID;
 
-    /* Create X509 certificate request */
+    
     X509_REQ *request = X509_REQ_new();
     if(request == NULL) {
         X509_free(x509Certificate);
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    /* Set version in X509 certificate request */
+    
     if(X509_REQ_set_version(request, 0) != 1) {
         retval = UA_STATUSCODE_BADOUTOFMEMORY;
         goto cleanup;
     }
 
-    /* For request extensions they are all packed in a single attribute.
-     * We save them in a STACK and add them all at once later. */
     STACK_OF(X509_EXTENSION)*exts = sk_X509_EXTENSION_new_null();
     if(!exts) {
         retval = UA_STATUSCODE_BADOUTOFMEMORY;
         goto cleanup;
     }
 
-    /* Set key usage in CSR context */
+    
     X509_EXTENSION *key_usage_ext = NULL;
     key_usage_ext = X509V3_EXT_conf_nid(NULL, NULL, NID_key_usage, "digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment");
     if(!key_usage_ext) {
@@ -1141,28 +1105,28 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
     }
     sk_X509_EXTENSION_push(exts, key_usage_ext);
 
-    /* Add entropy */
+    
     if(nonce && nonce->length > 0) {
         RAND_seed(nonce->data, nonce->length);
     }
 
-    /* Get subject alternate name field from certificate */
+    
     X509_EXTENSION *subject_alt_name_ext = NULL;
     int pos = X509_get_ext_by_NID(x509Certificate, NID_subject_alt_name, -1);
     if(pos >= 0) {
         subject_alt_name_ext = X509_get_ext(x509Certificate, pos);
         if(subject_alt_name_ext) {
-            /* Set subject alternate name in CSR context */
+            
             sk_X509_EXTENSION_push(exts, subject_alt_name_ext);
         }
     }
 
-    /* Now we've created the extensions we add them to the request */
+    
     X509_REQ_add_extensions(request, exts);
     sk_X509_EXTENSION_free(exts);
     X509_EXTENSION_free(key_usage_ext);
 
-    /* Get subject from argument or read it from certificate */
+    
     X509_NAME *name = NULL;
     if(subjectName && subjectName->length > 0) {
         name = X509_NAME_new();
@@ -1170,14 +1134,14 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
             retval = UA_STATUSCODE_BADOUTOFMEMORY;
             goto cleanup;
         }
-        /* add subject attributes to name */
+        
         if(UA_OpenSSL_X509_AddSubjectAttributes(subjectName, name) != UA_STATUSCODE_GOOD) {
             retval = UA_STATUSCODE_BADINTERNALERROR;
             X509_NAME_free(name);
             goto cleanup;
         }
     } else {
-        /* Get subject name from certificate */
+        
         X509_NAME *tmpName = X509_get_subject_name(x509Certificate);
         if(!tmpName) {
             retval = UA_STATUSCODE_BADOUTOFMEMORY;
@@ -1186,7 +1150,7 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
         name = X509_NAME_dup(tmpName);
     }
 
-    /* Set the subject in CSR context */
+    
     if(!X509_REQ_set_subject_name(request, name)) {
         retval = UA_STATUSCODE_BADINTERNALERROR;
         X509_NAME_free(name);
@@ -1242,10 +1206,10 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
             goto cleanup;
         }
         BN_free(exponent);
-        /* rsa will be freed by pkey */
+        
         rsa = NULL;
 
-#endif  /* end of OPENSSL_VERSION_NUMBER >= 0x30000000L */
+#endif  
         if(UA_OpenSSL_writePrivateKeyDer(*csrLocalPrivateKey, newPrivateKey) != UA_STATUSCODE_GOOD) {
             retval = UA_STATUSCODE_BADINTERNALERROR;
             EVP_PKEY_free(*csrLocalPrivateKey);
@@ -1264,7 +1228,7 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
             goto cleanup;
         }
     } else {
-        /* Set public key in CSR context */
+        
         EVP_PKEY *pubkey = X509_get_pubkey(x509Certificate);
         if(!pubkey) {
             retval = UA_STATUSCODE_BADINTERNALERROR;
@@ -1283,18 +1247,18 @@ UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
         EVP_PKEY_free(pubkey);
     }
 
-    /* Determine necessary length for CSR buffer */
+    
     const int csrBufferLength = i2d_X509_REQ(request, 0);
     if(csrBufferLength < 0) {
         retval = UA_STATUSCODE_BADINTERNALERROR;
         goto cleanup;
     }
 
-    /* create CSR buffer */
+    
     UA_ByteString_init(csr);
     UA_ByteString_allocBuffer(csr, csrBufferLength);
 
-    /* Create CSR buffer (DER format) */
+    
     char *ptr = (char*)csr->data;
     i2d_X509_REQ(request, (unsigned char**)&ptr);
 

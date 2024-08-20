@@ -1,27 +1,19 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2021 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
-/* Enable POSIX features */
+
 #if !defined(_XOPEN_SOURCE)
 # define _XOPEN_SOURCE 600
 #endif
 #ifndef _DEFAULT_SOURCE
 # define _DEFAULT_SOURCE
 #endif
-/* On older systems we need to define _BSD_SOURCE.
- * _DEFAULT_SOURCE is an alias for that. */
 #ifndef _BSD_SOURCE
 # define _BSD_SOURCE
 #endif
 
 #include <stdio.h>
 #include <ctype.h>
-#include <open62541/client.h>
-#include <open62541/client_config_default.h>
+#include <opcua/client.h>
+#include <opcua/client_config_default.h>
 
 static UA_Client *client = NULL;
 static UA_NodeId nodeidval = {0};
@@ -79,7 +71,7 @@ getEndpoints(int argc, char **argv) {
         return -1;
     UA_ClientConfig_setDefault(UA_Client_getConfig(client));
 
-    /* Get endpoints */
+    
     size_t endpointDescriptionsSize = 0;
     UA_EndpointDescription* endpointDescriptions = NULL;
     UA_StatusCode res = UA_Client_getEndpoints(client, url,
@@ -91,13 +83,13 @@ getEndpoints(int argc, char **argv) {
         return -1;
     }
 
-    /* Print the results */
+    
     UA_Variant var;
     UA_Variant_setArray(&var, endpointDescriptions, endpointDescriptionsSize,
                         &UA_TYPES[UA_TYPES_ENDPOINTDESCRIPTION]);
     printType(&var, &UA_TYPES[UA_TYPES_VARIANT]);
 
-    UA_Variant_clear(&var); /* deletes the original array */
+    UA_Variant_clear(&var); 
     return 0;
 }
 
@@ -138,7 +130,7 @@ static const char *attributeIds[27] = {
 
 static int
 readAttr(int argc, char **argv) {
-    /* Get the attr attribute (default: value) */
+    
     UA_UInt32 attr = UA_ATTRIBUTEID_VALUE;
     for(int argpos = 1; argpos < argc; argpos++) {
         if(argv[argpos] == NULL)
@@ -150,12 +142,12 @@ readAttr(int argc, char **argv) {
                 return -1;
             }
 
-            /* Try to parse integer attr argument */
+            
             attr = (UA_UInt32)atoi(argv[argpos]);
             if(attr != 0)
                 continue;
 
-            /* Convert to lower case and try to find in table */
+            
             for(char *w = argv[argpos]; *w; w++)
                 *w = (char)tolower(*w);
             for(UA_UInt32 i = 0; i < 26; i++) {
@@ -170,7 +162,7 @@ readAttr(int argc, char **argv) {
             return -1;
         }
 
-        /* Unknown option */
+        
         usage();
         return -1;
     }
@@ -185,7 +177,7 @@ readAttr(int argc, char **argv) {
         return ret;
     }
 
-    /* Read */
+    
     UA_ReadValueId rvid;
     UA_ReadValueId_init(&rvid);
     rvid.nodeId = nodeidval;
@@ -200,7 +192,7 @@ readAttr(int argc, char **argv) {
     UA_ReadResponse resp = UA_Client_Service_read(client, req);
     UA_Client_delete(client);
 
-    /* Print the result */
+    
     if(resp.responseHeader.serviceResult == UA_STATUSCODE_GOOD &&
        resp.resultsSize != 1)
         resp.responseHeader.serviceResult = UA_STATUSCODE_BADUNEXPECTEDERROR;
@@ -216,14 +208,12 @@ readAttr(int argc, char **argv) {
 
 int
 main(int argc, char **argv) {
-    /* Read the command line options. Set used options to NULL.
-     * Service-specific options are parsed later. */
     if(argc < 3) {
         usage();
         return 0;
     }
 
-    /* Get the url. Must not be a -- option string */
+    
     if(strstr(argv[1], "--") == argv[1]) {
         usage();
         return -1;
@@ -231,18 +221,18 @@ main(int argc, char **argv) {
     url = argv[1];
     argv[1] = NULL;
 
-    /* Get the service */
+    
     service = argv[2];
     argv[2] = NULL;
 
-    /* If not a -- option string, then this is the NodeId */
+    
     int argpos = 3;
     if(argc > argpos && strstr(argv[argpos], "--") != argv[argpos]) {
         nodeid = argv[argpos];
         argv[argpos] = NULL;
         argpos++;
 
-        /* If not a -- option string, then this is the value */
+        
         if(argc > argpos && strstr(argv[argpos], "--") != argv[argpos]) {
             value = argv[argpos];
             argv[argpos] = NULL;
@@ -250,7 +240,7 @@ main(int argc, char **argv) {
         }
     }
 
-    /* Process the options */
+    
     for(; argpos < argc; argpos++) {
         if(strcmp(argv[argpos], "--help") == 0) {
             usage();
@@ -266,7 +256,7 @@ main(int argc, char **argv) {
 #endif
     }
 
-    /* Execute the service */
+    
     if(strcmp(service, "getendpoints") == 0) {
         if(!nodeid && !value)
             return getEndpoints(argc, argv);
@@ -283,7 +273,7 @@ main(int argc, char **argv) {
     //        return writeAttr(argc-argpos, &argv[argpos]);
     //}
 
-    /* Unknown service */
+    
     usage();
     return -1;
 }

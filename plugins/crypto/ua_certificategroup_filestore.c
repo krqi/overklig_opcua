@@ -1,21 +1,13 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2022 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2023 (c) Fraunhofer IOSB (Author: Kai Huebl)
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-#include <open62541/util.h>
-#include <open62541/plugin/certificategroup_default.h>
-#include <open62541/plugin/log_stdout.h>
+#include <opcua/util.h>
+#include <opcua/plugin/certificategroup_default.h>
+#include <opcua/plugin/log_stdout.h>
 
 #include "mp_printf.h"
 
 #ifdef UA_ENABLE_ENCRYPTION
 
-#ifdef __linux__ /* Linux only so far */
+#ifdef __linux__ 
 
 #include <stdio.h>
 #include <linux/limits.h>
@@ -35,7 +27,7 @@ struct FileCertStore;
 typedef struct FileCertStore FileCertStore;
 
 struct FileCertStore {
-    /* Memory cert store as a base */
+    
     UA_CertificateGroup *store;
 
     int inotifyFd;
@@ -58,7 +50,7 @@ mkpath(char *dir, mode_t mode) {
         return 1;
 
     if(!stat(dir, &sb))
-        return 0;  /* Directory already exist */
+        return 0;  
 
     size_t len = strlen(dir) + 1;
     char *tmp_dir = (char*)UA_malloc(len);
@@ -66,8 +58,6 @@ mkpath(char *dir, mode_t mode) {
         return 1;
     memcpy(tmp_dir, dir, len);
 
-    /* Before the actual target directory is created, the recursive call ensures
-     * that all parent directories are created or already exist. */
     mkpath(dirname(tmp_dir), mode);
     UA_free(tmp_dir);
 
@@ -78,11 +68,11 @@ static UA_StatusCode
 removeAllFilesFromDir(const char *const path, bool removeSubDirs) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Check parameter */
+    
     if(path == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* remove all regular files from directory */
+    
     DIR *dir = opendir(path);
     if(!dir)
         return UA_STATUSCODE_BADINTERNALERROR;
@@ -116,7 +106,7 @@ removeAllFilesFromDir(const char *const path, bool removeSubDirs) {
 static UA_StatusCode
 getCertFileName(const char *path, const UA_ByteString *certificate,
                 char *fileNameBuf, size_t fileNameLen) {
-    /* Check parameter */
+    
     if(path == NULL || certificate == NULL || fileNameBuf == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
@@ -171,12 +161,12 @@ readFileToByteString(const char *const path, UA_ByteString *data) {
     if(path == NULL || data == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Open the file */
+    
     FILE *fp = fopen(path, "rb");
     if(!fp)
         return UA_STATUSCODE_BADNOTFOUND;
 
-    /* Get the file length, allocate the data and read */
+    
     fseek(fp, 0, SEEK_END);
     UA_StatusCode retval = UA_ByteString_allocBuffer(data, (size_t)ftell(fp));
     if(retval == UA_STATUSCODE_GOOD) {
@@ -197,12 +187,12 @@ static UA_StatusCode
 writeByteStringToFile(const char *const path, const UA_ByteString *data) {
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Open the file */
+    
     FILE *fp = fopen(path, "wb");
     if(!fp)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Write byte string to file */
+    
     size_t len = fwrite(data->data, sizeof(UA_Byte), data->length * sizeof(UA_Byte), fp);
     if(len != data->length) {
         fclose(fp);
@@ -221,7 +211,7 @@ readCertificates(UA_ByteString **list, size_t *listSize, const UA_String path) {
     mp_snprintf(listPath, PATH_MAX, "%.*s",
                 (int)path.length, (char*)path.data);
 
-    /* Determine number of certificates */
+    
     size_t numCerts = 0;
     DIR *dir = opendir(listPath);
     if(!dir)
@@ -240,7 +230,7 @@ readCertificates(UA_ByteString **list, size_t *listSize, const UA_String path) {
         return retval;
     }
 
-    /* Read files from directory */
+    
     size_t numActCerts = 0;
     rewinddir(dir);
 
@@ -248,14 +238,14 @@ readCertificates(UA_ByteString **list, size_t *listSize, const UA_String path) {
         if(dirent->d_type != DT_REG)
             continue;
         if(numActCerts < numCerts) {
-            /* Create filename to load */
+            
             char filename[PATH_MAX];
             if(mp_snprintf(filename, PATH_MAX, "%s/%s", listPath, dirent->d_name) < 0) {
                 closedir(dir);
                 return UA_STATUSCODE_BADINTERNALERROR;
             }
 
-            /* Load data from file */
+            
             retval = readFileToByteString(filename, &((*list)[numActCerts]));
             if(retval != UA_STATUSCODE_GOOD) {
                 closedir(dir);
@@ -301,10 +291,7 @@ reloadTrustStore(UA_CertificateGroup *certGroup) {
     if(length == -1 && errno != EAGAIN)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* No events, which means no changes to the pki folder */
-    /* If the nonblocking read() found no events to read, then
-     * it returns -1 with errno set to EAGAIN. In that case,
-     * we exit the loop. */
+    
     if(length <= 0)
         return UA_STATUSCODE_GOOD;
 
@@ -324,7 +311,7 @@ reloadTrustStore(UA_CertificateGroup *certGroup) {
 static UA_StatusCode
 writeCertificates(UA_CertificateGroup *certGroup, const UA_ByteString *list,
                   size_t listSize, const char *listPath) {
-    /* Check parameter */
+    
     if(listPath == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
     if(listSize > 0 && list == NULL)
@@ -332,13 +319,13 @@ writeCertificates(UA_CertificateGroup *certGroup, const UA_ByteString *list,
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     for(size_t i = 0; i < listSize; i++) {
-        /* Create filename to load */
+        
         char filename[PATH_MAX];
         retval = getCertFileName(listPath, &list[i], filename, PATH_MAX);
         if(retval != UA_STATUSCODE_GOOD)
             return UA_STATUSCODE_BADINTERNALERROR;
 
-        /* Store data in file */
+        
         retval = writeByteStringToFile(filename, &list[i]);
         if(retval != UA_STATUSCODE_GOOD)
             return retval;
@@ -350,7 +337,7 @@ writeCertificates(UA_CertificateGroup *certGroup, const UA_ByteString *list,
 static UA_StatusCode
 writeTrustList(UA_CertificateGroup *certGroup, const UA_ByteString *list,
                size_t listSize, const UA_String path) {
-    /* Check parameter */
+    
     if(path.length == 0)
         return UA_STATUSCODE_BADINTERNALERROR;
     if(listSize > 0 && list == NULL)
@@ -358,7 +345,7 @@ writeTrustList(UA_CertificateGroup *certGroup, const UA_ByteString *list,
 
     char listPath[PATH_MAX] = {0};
     mp_snprintf(listPath, PATH_MAX, "%.*s", (int)path.length, (char*)path.data);
-    /* remove existing files in directory */
+    
     UA_StatusCode retval = removeAllFilesFromDir(listPath, false);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
@@ -368,7 +355,7 @@ writeTrustList(UA_CertificateGroup *certGroup, const UA_ByteString *list,
 
 static UA_StatusCode
 writeTrustStore(UA_CertificateGroup *certGroup, const UA_UInt32 trustListMask) {
-    /* Check parameter */
+    
     if(certGroup == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
@@ -445,11 +432,11 @@ FileCertStore_createPkiDirectory(UA_CertificateGroup *certGroup, const UA_String
     memcpy(rootDirectory, directory.data, directory.length);
     rootDirectorySize = strnlen(rootDirectory, PATH_MAX);
 
-    /* Add pki directory */
+    
     strncpy(&rootDirectory[rootDirectorySize], "/pki/", PATH_MAX - rootDirectorySize);
     rootDirectorySize = strnlen(rootDirectory, PATH_MAX);
 
-    /* Add Certificate Group Id */
+    
     UA_NodeId applCertGroup =
         UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERCONFIGURATION_CERTIFICATEGROUPS_DEFAULTAPPLICATIONGROUP);
     UA_NodeId httpCertGroup =
@@ -519,12 +506,12 @@ FileCertStore_createInotifyEvent(UA_CertificateGroup *certGroup) {
 
 static UA_StatusCode
 FileCertStore_getTrustList(UA_CertificateGroup *certGroup, UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
     FileCertStore *context = (FileCertStore *)certGroup->context;
-    /* It will only re-read the Cert store on the file system if there have been changes to files. */
+    
     UA_StatusCode retval = reloadTrustStore(certGroup);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
@@ -534,12 +521,12 @@ FileCertStore_getTrustList(UA_CertificateGroup *certGroup, UA_TrustListDataType 
 
 static UA_StatusCode
 FileCertStore_setTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
     FileCertStore *context = (FileCertStore *)certGroup->context;
-    /* It will only re-read the Cert store on the file system if there have been changes to files. */
+    
     UA_StatusCode retval = reloadTrustStore(certGroup);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
@@ -553,12 +540,12 @@ FileCertStore_setTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDat
 
 static UA_StatusCode
 FileCertStore_addToTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
     FileCertStore *context = (FileCertStore *)certGroup->context;
-    /* It will only re-read the Cert store on the file system if there have been changes to files. */
+    
     UA_StatusCode retval = reloadTrustStore(certGroup);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
@@ -572,12 +559,12 @@ FileCertStore_addToTrustList(UA_CertificateGroup *certGroup, const UA_TrustListD
 
 static UA_StatusCode
 FileCertStore_removeFromTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
     FileCertStore *context = (FileCertStore *)certGroup->context;
-    /* It will only re-read the Cert store on the file system if there have been changes to files. */
+    
     UA_StatusCode retval = reloadTrustStore(certGroup);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
@@ -591,7 +578,7 @@ FileCertStore_removeFromTrustList(UA_CertificateGroup *certGroup, const UA_Trust
 
 static UA_StatusCode
 FileCertStore_getRejectedList(UA_CertificateGroup *certGroup, UA_ByteString **rejectedList, size_t *rejectedListSize) {
-    /* Check parameter */
+    
     if(certGroup == NULL || rejectedList == NULL || rejectedListSize == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
@@ -601,12 +588,12 @@ FileCertStore_getRejectedList(UA_CertificateGroup *certGroup, UA_ByteString **re
 
 static UA_StatusCode
 FileCertStore_verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certificate) {
-    /* Check parameter */
+    
     if(certGroup == NULL || certificate == NULL)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
     FileCertStore *context = (FileCertStore *)certGroup->context;
-    /* It will only re-read the Cert store on the file system if there have been changes to files. */
+    
     UA_StatusCode retval = reloadTrustStore(certGroup);
     if(retval != UA_STATUSCODE_GOOD) {
         return retval;
@@ -617,7 +604,7 @@ FileCertStore_verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteStr
        retval == UA_STATUSCODE_BADCERTIFICATEUSENOTALLOWED ||
        retval == UA_STATUSCODE_BADCERTIFICATEREVOCATIONUNKNOWN ||
        retval == UA_STATUSCODE_BADCERTIFICATEISSUERREVOCATIONUNKNOWN) {
-        /* write rejectedList to filestore */
+        
         UA_ByteString *rejectedList = NULL;
         size_t rejectedListSize = 0;
         context->store->getRejectedList(context->store, &rejectedList, &rejectedListSize);
@@ -630,7 +617,7 @@ FileCertStore_verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteStr
 
 static void
 FileCertStore_clear(UA_CertificateGroup *certGroup) {
-    /* check parameter */
+    
     if(!certGroup || !certGroup->context)
         return;
 
@@ -670,7 +657,7 @@ UA_CertificateGroup_Filestore(UA_CertificateGroup *certGroup,
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Clear if the plugin is already initialized */
+    
     if(certGroup->clear)
         certGroup->clear(certGroup);
 
@@ -685,7 +672,7 @@ UA_CertificateGroup_Filestore(UA_CertificateGroup *certGroup,
     certGroup->verifyCertificate = FileCertStore_verifyCertificate;
     certGroup->clear = FileCertStore_clear;
 
-    /* Set PKI Store context data */
+    
     FileCertStore *context = (FileCertStore *)UA_calloc(1, sizeof(FileCertStore));
     if(!context) {
         retval = UA_STATUSCODE_BADOUTOFMEMORY;

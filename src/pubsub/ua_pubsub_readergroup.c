@@ -1,19 +1,9 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2017-2018 Fraunhofer IOSB (Author: Andreas Ebner)
- * Copyright (c) 2019 Fraunhofer IOSB (Author: Julius Pfrommer)
- * Copyright (c) 2019 Kalycito Infotech Private Limited
- * Copyright (c) 2021 Fraunhofer IOSB (Author: Jan Hermes)
- * Copyright (c) 2022 Linutronix GmbH (Author: Muddasir Shakil)
- */
 
-#include <open62541/server_pubsub.h>
+#include <opcua/server_pubsub.h>
 #include "ua_pubsub.h"
 #include "server/ua_server_internal.h"
 
-#ifdef UA_ENABLE_PUBSUB /* conditional compilation */
+#ifdef UA_ENABLE_PUBSUB 
 
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
 #include "ua_pubsub_networkmessage.h"
@@ -72,7 +62,7 @@ UA_ReaderGroup_findDSRbyId(UA_Server *server, UA_NodeId identifier) {
     return NULL;
 }
 
-/* ReaderGroup Config Handling */
+
 
 UA_StatusCode
 UA_ReaderGroupConfig_copy(const UA_ReaderGroupConfig *src,
@@ -94,17 +84,17 @@ UA_ReaderGroupConfig_clear(UA_ReaderGroupConfig *readerGroupConfig) {
     UA_String_clear(&readerGroupConfig->securityGroupId);
 }
 
-/* ReaderGroup Lifecycle */
+
 
 UA_StatusCode
 UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
                       const UA_ReaderGroupConfig *rgc,
                       UA_NodeId *readerGroupId) {
-    /* Check for valid readergroup configuration */
+    
     if(!rgc)
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-    /* Search the connection by the given connectionIdentifier */
+    
     UA_PubSubConnection *connection =
         UA_PubSubConnection_findConnectionbyId(server, connectionId);
     if(!connection)
@@ -117,7 +107,7 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
         return UA_STATUSCODE_BADCONFIGURATIONERROR;
     }
 
-    /* Allocate memory for new reader group and add settings */
+    
     UA_ReaderGroup *newGroup = (UA_ReaderGroup *)UA_calloc(1, sizeof(UA_ReaderGroup));
     if(!newGroup)
         return UA_STATUSCODE_BADOUTOFMEMORY;
@@ -125,14 +115,14 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
     newGroup->head.componentType = UA_PUBSUB_COMPONENT_READERGROUP;
     newGroup->linkedConnection = connection;
 
-    /* Deep copy of the config */
+    
     UA_StatusCode retval = UA_ReaderGroupConfig_copy(rgc, &newGroup->config);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_free(newGroup);
         return retval;
     }
 
-    /* Add to the connection */
+    
     LIST_INSERT_HEAD(&connection->readerGroups, newGroup, listEntry);
     connection->readerGroupsSize++;
 
@@ -140,12 +130,12 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
     if(rgc->securityMode == UA_MESSAGESECURITYMODE_SIGN ||
        rgc->securityMode == UA_MESSAGESECURITYMODE_SIGNANDENCRYPT) {
         if(!UA_String_isEmpty(&rgc->securityGroupId) && rgc->securityPolicy) {
-            /* Does the key storage already exist? */
+            
             newGroup->keyStorage =
                 UA_PubSubKeyStorage_findKeyStorage(server, rgc->securityGroupId);
 
             if(!newGroup->keyStorage) {
-                /* Create a new key storage */
+                
                 newGroup->keyStorage = (UA_PubSubKeyStorage *)
                     UA_calloc(1, sizeof(UA_PubSubKeyStorage));
                 if(!newGroup->keyStorage) {
@@ -161,7 +151,7 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
                 }
             }
 
-            /* Increase the ref count */
+            
             newGroup->keyStorage->referenceCount++;
         }
     }
@@ -178,7 +168,7 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
                                           &newGroup->head.identifier);
 #endif
 
-    /* Cache the log string */
+    
     char tmpLogIdStr[128];
     mp_snprintf(tmpLogIdStr, 128, "%SReaderGroup %N\t| ",
                 connection->head.logIdString, newGroup->head.identifier);
@@ -186,7 +176,7 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
 
     UA_LOG_INFO_PUBSUB(server->config.logging, newGroup, "ReaderGroup created");
 
-    /* Validate the connection settings */
+    
     retval = UA_ReaderGroup_connect(server, newGroup, true);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_LOG_ERROR_PUBSUB(server->config.logging, newGroup,
@@ -195,10 +185,10 @@ UA_ReaderGroup_create(UA_Server *server, UA_NodeId connectionId,
         return retval;
     }
 
-    /* Trigger the connection */
+    
     UA_PubSubConnection_setPubSubState(server, connection, connection->head.state);
 
-    /* Copying a numeric NodeId always succeeds */
+    
     if(readerGroupId)
         UA_NodeId_copy(&newGroup->head.identifier, readerGroupId);
 
@@ -237,9 +227,6 @@ UA_ReaderGroup_remove(UA_Server *server, UA_ReaderGroup *rg) {
         return UA_STATUSCODE_BADCONFIGURATIONERROR;
     }
 
-    /* Disable (and disconnect) and set the deleteFlag. This prevents a
-     * reconnect and triggers the deletion when the last open socket is
-     * closed. */
     rg->deleteFlag = true;
     UA_ReaderGroup_setPubSubState(server, rg, UA_PUBSUBSTATE_DISABLED);
 
@@ -261,12 +248,12 @@ UA_ReaderGroup_remove(UA_Server *server, UA_ReaderGroup *rg) {
 #endif
 
     if(rg->recvChannelsSize == 0) {
-        /* Unlink from the connection */
+        
         LIST_REMOVE(rg, listEntry);
         connection->readerGroupsSize--;
         rg->linkedConnection = NULL;
 
-        /* Actually remove the ReaderGroup */
+        
 #ifdef UA_ENABLE_PUBSUB_INFORMATIONMODEL
         deleteNode(server, rg->head.identifier, true);
 #endif
@@ -278,7 +265,7 @@ UA_ReaderGroup_remove(UA_Server *server, UA_ReaderGroup *rg) {
         UA_free(rg);
     }
 
-    /* Update the connection state */
+    
     UA_PubSubConnection_setPubSubState(server, connection, connection->head.state);
 
     return UA_STATUSCODE_GOOD;
@@ -303,7 +290,7 @@ UA_Server_ReaderGroup_getConfig(UA_Server *server, const UA_NodeId readerGroupId
 
     UA_LOCK(&server->serviceMutex);
 
-    /* Identify the readergroup through the readerGroupIdentifier */
+    
     UA_ReaderGroup *currentReaderGroup =
         UA_ReaderGroup_findRGbyId(server, readerGroupIdentifier);
     if(!currentReaderGroup) {
@@ -351,32 +338,32 @@ UA_ReaderGroup_setPubSubState(UA_Server *server, UA_ReaderGroup *rg,
     rg->head.state = targetState;
 
     switch(rg->head.state) {
-        /* Disabled */
+        
     default:
         rg->head.state = UA_PUBSUBSTATE_ERROR;
         ret = UA_STATUSCODE_BADINTERNALERROR;
-        /* fallthrough */
+        
     case UA_PUBSUBSTATE_DISABLED:
     case UA_PUBSUBSTATE_ERROR:
         UA_ReaderGroup_disconnect(rg);
         rg->hasReceived = false;
         break;
 
-        /* Enabled */
+        
     case UA_PUBSUBSTATE_PAUSED:
     case UA_PUBSUBSTATE_PREOPERATIONAL:
     case UA_PUBSUBSTATE_OPERATIONAL:
         if(connection->head.state == UA_PUBSUBSTATE_DISABLED ||
            connection->head.state == UA_PUBSUBSTATE_ERROR) {
-            /* Connection is disabled -> paused */
+            
             rg->head.state = UA_PUBSUBSTATE_PAUSED;
         } else {
-            /* Pre-operational until a message was received */
+            
             rg->head.state = connection->head.state;
             if(rg->head.state == UA_PUBSUBSTATE_OPERATIONAL && !rg->hasReceived)
                 rg->head.state = UA_PUBSUBSTATE_PREOPERATIONAL;
 
-            /* Connect RG-specific connections. For example for MQTT. */
+            
             ret = UA_ReaderGroup_connect(server, rg, false);
             if(ret != UA_STATUSCODE_GOOD)
                 rg->head.state = UA_PUBSUBSTATE_ERROR;
@@ -384,7 +371,7 @@ UA_ReaderGroup_setPubSubState(UA_Server *server, UA_ReaderGroup *rg,
         break;
     }
 
-    /* Inform application about state change */
+    
     if(rg->head.state != oldState) {
         UA_ServerConfig *pConfig = &server->config;
         UA_LOG_INFO_PUBSUB(pConfig->logging, rg, "State change: %s -> %s",
@@ -398,7 +385,7 @@ UA_ReaderGroup_setPubSubState(UA_Server *server, UA_ReaderGroup *rg,
         }
     }
 
-    /* Update the attached DataSetReaders */
+    
     UA_DataSetReader *dsr;
     LIST_FOREACH(dsr, &rg->readers, listEntry) {
         UA_DataSetReader_setPubSubState(server, dsr, dsr->head.state);
@@ -476,7 +463,7 @@ setReaderGroupEncryptionKeys(UA_Server *server, const UA_NodeId readerGroup,
         rg->nonceSequenceNumber = 1;
     }
 
-    /* Create a new context */
+    
     if(!rg->securityPolicyContext) {
         return rg->config.securityPolicy->
             newContext(rg->config.securityPolicy->policyContext,
@@ -484,7 +471,7 @@ setReaderGroupEncryptionKeys(UA_Server *server, const UA_NodeId readerGroup,
                        &rg->securityPolicyContext);
     }
 
-    /* Update the context */
+    
     return rg->config.securityPolicy->
         setSecurityKeys(rg->securityPolicyContext, &signingKey,
                         &encryptingKey, &keyNonce);
@@ -505,7 +492,7 @@ UA_Server_setReaderGroupEncryptionKeys(UA_Server *server,
     return res;
 }
 
-/* Freezing of the configuration */
+
 
 UA_StatusCode
 UA_ReaderGroup_freezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
@@ -513,27 +500,22 @@ UA_ReaderGroup_freezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
     if(rg->configurationFrozen)
         return UA_STATUSCODE_GOOD;
 
-    /* PubSubConnection freezeCounter++ */
+    
     UA_PubSubConnection *pubSubConnection = rg->linkedConnection;
     pubSubConnection->configurationFreezeCounter++;
 
-    /* ReaderGroup freeze */
-    /* TODO: Clarify on the freeze functionality in multiple DSR, multiple
-     * networkMessage conf in a RG */
+    
     rg->configurationFrozen = true;
 
-    /* DataSetReader freeze */
+    
     UA_DataSetReader *dsr;
     UA_UInt16 dsrCount = 0;
     LIST_FOREACH(dsr, &rg->readers, listEntry){
         dsr->configurationFrozen = true;
         dsrCount++;
-        /* TODO: Configuration frozen for subscribedDataSet once
-         * UA_Server_DataSetReader_addTargetVariables API modified to support
-         * adding target variable one by one or in a group stored in a list. */
     }
 
-    /* Not rt, we don't have to adjust anything */
+    
     if((rg->config.rtLevel & UA_PUBSUB_RT_FIXED_SIZE) == 0)
         return UA_STATUSCODE_GOOD;
 
@@ -546,7 +528,7 @@ UA_ReaderGroup_freezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
 
     dsr = LIST_FIRST(&rg->readers);
 
-    /* Support only to UADP encoding */
+    
     if(dsr->config.messageSettings.content.decoded.type !=
        &UA_TYPES[UA_TYPES_UADPDATASETREADERMESSAGEDATATYPE]) {
         UA_LOG_WARNING_PUBSUB(server->config.logging, dsr,
@@ -554,7 +536,7 @@ UA_ReaderGroup_freezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
         return UA_STATUSCODE_BADNOTSUPPORTED;
     }
 
-    /* Don't support string PublisherId for the fast-path (at this time) */
+    
     if(dsr->config.publisherId.idType == UA_PUBLISHERIDTYPE_STRING) {
         UA_LOG_WARNING_PUBSUB(server->config.logging, dsr,
                               "PubSub-RT configuration fail: String PublisherId");
@@ -563,24 +545,24 @@ UA_ReaderGroup_freezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
 
     size_t fieldsSize = dsr->config.dataSetMetaData.fieldsSize;
     for(size_t i = 0; i < fieldsSize; i++) {
-        /* TODO: Use the datasource from the node */
-        /* UA_FieldTargetVariable *tv = */
-        /*     &dsr->config.subscribedDataSet.subscribedDataSetTarget.targetVariables[i]; */
-        /* const UA_VariableNode *rtNode = (const UA_VariableNode *) */
-        /*     UA_NODESTORE_GET(server, &tv->targetVariable.targetNodeId); */
-        /* if(!rtNode || */
-        /*    rtNode->valueBackend.backendType != UA_VALUEBACKENDTYPE_EXTERNAL) { */
-        /*     UA_LOG_WARNING_PUBSUB(server->config.logging, dsr, */
-        /*                           "PubSub-RT configuration fail: PDS contains field " */
-        /*                           "without external data source."); */
-        /*     UA_NODESTORE_RELEASE(server, (const UA_Node *) rtNode); */
-        /*     return UA_STATUSCODE_BADNOTSUPPORTED; */
-        /* } */
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
 
-        /* /\* Set the external data source in the tv *\/ */
-        /* tv->externalDataValue = rtNode->valueBackend.backend.external.value; */
+        
+        
 
-        /* UA_NODESTORE_RELEASE(server, (const UA_Node *) rtNode); */
+        
 
         UA_FieldMetaData *field = &dsr->config.dataSetMetaData.fields[i];
         if((UA_NodeId_equal(&field->dataType, &UA_TYPES[UA_TYPES_STRING].typeId) ||
@@ -599,14 +581,8 @@ UA_ReaderGroup_freezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
         }
     }
 
-    /* Reset the OffsetBuffer. The OffsetBuffer for a frozen configuration is
-     * generated when the first message is received. So we know the exact
-     * settings which headers are present, etc. Until then the ReaderGroup is
-     * "PreOperational". */
     UA_NetworkMessageOffsetBuffer_clear(&dsr->bufferedMessage);
 
-    /* Set the current state again. This can move the state from Operational to
-     * PreOperational. */
     return UA_ReaderGroup_setPubSubState(server, rg, rg->head.state);
 }
 
@@ -626,18 +602,18 @@ UA_StatusCode
 UA_ReaderGroup_unfreezeConfiguration(UA_Server *server, UA_ReaderGroup *rg) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Already unfrozen */
+    
     if(!rg->configurationFrozen)
         return UA_STATUSCODE_GOOD;
 
-    /* PubSubConnection freezeCounter-- */
+    
     UA_PubSubConnection *pubSubConnection = rg->linkedConnection;
     pubSubConnection->configurationFreezeCounter--;
 
-    /* ReaderGroup unfreeze */
+    
     rg->configurationFrozen = false;
 
-    /* DataSetReader unfreeze */
+    
     UA_DataSetReader *dataSetReader;
     LIST_FOREACH(dataSetReader, &rg->readers, listEntry) {
         dataSetReader->configurationFrozen = false;
@@ -662,17 +638,15 @@ UA_Server_unfreezeReaderGroupConfiguration(UA_Server *server,
 UA_Boolean
 UA_ReaderGroup_process(UA_Server *server, UA_ReaderGroup *rg,
                        UA_NetworkMessage *nm) {
-    /* Check if the ReaderGroup is enabled */
+    
     if(rg->head.state != UA_PUBSUBSTATE_OPERATIONAL &&
        rg->head.state != UA_PUBSUBSTATE_PREOPERATIONAL)
         return false;
 
-    /* Set to operational if required */
+    
     rg->hasReceived = true;
     UA_ReaderGroup_setPubSubState(server, rg, rg->head.state);
 
-    /* Safe iteration. The current Reader might be deleted in the ReaderGroup
-     * _setPubSubState callback. */
     UA_Boolean processed = false;
     UA_DataSetReader *reader, *reader_tmp;
     LIST_FOREACH_SAFE(reader, &rg->readers, listEntry, reader_tmp) {
@@ -681,29 +655,27 @@ UA_ReaderGroup_process(UA_Server *server, UA_ReaderGroup *rg,
         if(res != UA_STATUSCODE_GOOD)
             continue;
 
-        /* Check if the reader is enabled */
+        
         if(reader->head.state != UA_PUBSUBSTATE_OPERATIONAL &&
            reader->head.state != UA_PUBSUBSTATE_PREOPERATIONAL)
             continue;
 
-        /* Update the ReaderGroup state if this is the first received message */
+        
         if(!rg->hasReceived) {
             rg->hasReceived = true;
             UA_ReaderGroup_setPubSubState(server, rg, rg->head.state);
         }
 
-        /* The message was processed by at least one reader */
+        
         processed = true;
 
-        /* No payload header. The message ontains a single DataSetMessage that
-         * is processed by every Reader. */
         if(!nm->payloadHeaderEnabled) {
             UA_DataSetReader_process(server, reader,
                                      nm->payload.dataSetPayload.dataSetMessages);
             continue;
         }
 
-        /* Process only the payloads where the WriterId from the header is expected */
+        
         UA_DataSetPayloadHeader *ph = &nm->payloadHeader.dataSetPayloadHeader;
         for(UA_Byte i = 0; i < ph->count; i++) {
             if(reader->config.dataSetWriterId == ph->dataSetWriterIds[i]) {
@@ -719,13 +691,11 @@ UA_ReaderGroup_process(UA_Server *server, UA_ReaderGroup *rg,
 UA_Boolean
 UA_ReaderGroup_decodeAndProcessRT(UA_Server *server, UA_ReaderGroup *rg,
                                   UA_ByteString buf) {
-    /* Received a (first) message for the ReaderGroup.
-     * Transition from PreOperational to Operational. */
     rg->hasReceived = true;
     if(rg->head.state == UA_PUBSUBSTATE_PREOPERATIONAL)
         UA_ReaderGroup_setPubSubState(server, rg, UA_PUBSUBSTATE_OPERATIONAL);
 
-    /* Set up the decoding context */
+    
     Ctx ctx;
     ctx.pos = buf.data;
     ctx.end = buf.data + buf.length;
@@ -737,13 +707,6 @@ UA_ReaderGroup_decodeAndProcessRT(UA_Server *server, UA_ReaderGroup *rg,
     UA_NetworkMessage currentNetworkMessage;
     memset(&currentNetworkMessage, 0, sizeof(UA_NetworkMessage));
 
-    /* Set the arena-based calloc for realtime processing. This is because the
-     * header can (in theory) contain PromotedFields that require
-     * heap-allocation.
-     *
-     * The arena is stack-allocated and rather small. So this method is
-     * reentrant. Typically the arena-based calloc is not used at all for the
-     * "static" network message headers encountered in an RT context. */
     MembufCalloc mc;
     mc.pos = 0;
     ctx.opts.callocContext = &mc;
@@ -756,7 +719,7 @@ UA_ReaderGroup_decodeAndProcessRT(UA_Server *server, UA_ReaderGroup *rg,
         return false;
     }
 
-    /* Decrypt the message. Keep pos right after the header. */
+    
     rv = verifyAndDecryptNetworkMessage(server->config.logging, buf, &ctx,
                                         &currentNetworkMessage, rg);
     if(rv != UA_STATUSCODE_GOOD) {
@@ -765,15 +728,15 @@ UA_ReaderGroup_decodeAndProcessRT(UA_Server *server, UA_ReaderGroup *rg,
         return false;
     }
 
-    /* Process the message for each reader */
+    
     UA_DataSetReader *dsr;
     LIST_FOREACH(dsr, &rg->readers, listEntry) {
-        /* Check if the reader is enabled */
+        
         if(dsr->head.state != UA_PUBSUBSTATE_OPERATIONAL &&
            dsr->head.state != UA_PUBSUBSTATE_PREOPERATIONAL)
             continue;
 
-        /* Check the identifier */
+        
         rv = UA_DataSetReader_checkIdentifier(server, &currentNetworkMessage,
                                               dsr, rg->config);
         if(rv != UA_STATUSCODE_GOOD) {
@@ -782,7 +745,7 @@ UA_ReaderGroup_decodeAndProcessRT(UA_Server *server, UA_ReaderGroup *rg,
             continue;
         }
 
-        /* Process the message */
+        
         UA_DataSetReader_decodeAndProcessRT(server, dsr, buf);
         processed = true;
     }
@@ -790,9 +753,9 @@ UA_ReaderGroup_decodeAndProcessRT(UA_Server *server, UA_ReaderGroup *rg,
     return processed;
 }
 
-/******************************/
-/* Decrypt the NetworkMessage */
-/******************************/
+
+
+
 
 static UA_StatusCode
 needsDecryption(const UA_Logger *logger,
@@ -883,7 +846,7 @@ verifyAndDecryptNetworkMessage(const UA_Logger *logger, UA_ByteString buffer,
                        "PubSub receive. securityPolicy must be set when security mode"
                        "is enabled to sign and/or encrypt");
 
-    /* Validate the signature */
+    
     if(doValidate) {
         size_t sigSize = securityPolicy->symmetricModule.cryptoModule.
             signatureAlgorithm.getLocalSignatureSize(channelContext);
@@ -895,11 +858,11 @@ verifyAndDecryptNetworkMessage(const UA_Logger *logger, UA_ByteString buffer,
         UA_CHECK_STATUS_WARN(rv, return rv, logger, UA_LOGCATEGORY_SECURITYPOLICY,
                              "PubSub receive. Signature nvalid");
 
-        /* Remove the signature from the ctx->end. We do not want to decode that. */
+        
         ctx->end -= sigSize;
     }
 
-    /* Decrypt the content */
+    
     if(doDecrypt) {
         const UA_ByteString nonce = {
             (size_t)nm->securityHeader.messageNonceSize,
@@ -919,4 +882,4 @@ verifyAndDecryptNetworkMessage(const UA_Logger *logger, UA_ByteString buffer,
     return UA_STATUSCODE_GOOD;
 }
 
-#endif /* UA_ENABLE_PUBSUB */
+#endif 

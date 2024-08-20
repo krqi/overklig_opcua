@@ -1,10 +1,5 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- * Copyright (c) 2021 Kalycito Infotech Private Limited
- */
 
-/* gcc cert_encrypt_tpm.c -o cert_encrypt_tpm -ltpm2_pkcs11 -lssl -lcrypto */
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +28,7 @@ void get_MAC_error(void) {
     return;
 }
 
-/* If message is binary do not use strlen(message) for message_len. */
+
 static void get_MAC(const uint8_t *message, size_t message_len, unsigned char **message_digest,
              unsigned int *message_digest_len)
 {
@@ -51,7 +46,7 @@ static void get_MAC(const uint8_t *message, size_t message_len, unsigned char **
     EVP_MD_CTX_free(md_ctx);
 }
 
-/* If object is found the object_handle is set */
+
 static boolean_t
 find_object_by_label(CK_SESSION_HANDLE hSession, unsigned char *label, CK_OBJECT_HANDLE *object_handle) {
     CK_RV rv;
@@ -62,7 +57,7 @@ find_object_by_label(CK_SESSION_HANDLE hSession, unsigned char *label, CK_OBJECT
         CK_OBJECT_HANDLE hObject = 0;
         rv = C_FindObjects( hSession, &hObject, 1, &foundCount );
         if (rv == CKR_OK) {
-            /* This will show the labels and values */
+            
             CK_ATTRIBUTE attrTemplate[] = {
                 {CKA_LABEL, NULL_PTR, 0}
             };
@@ -90,8 +85,6 @@ find_object_by_label(CK_SESSION_HANDLE hSession, unsigned char *label, CK_OBJECT
     return rtnval;
 }
 
-/* The encrypted_data is a binary_data struct that will contain
-   the length and contents of the encrypted data */
 static CK_RV encrypt(int slotNum, unsigned char *pin, unsigned char *label,
               binary_data *in_data, binary_data **encrypted_data, binary_data * iv_data) {
     static CK_SLOT_ID_PTR pSlotList = NULL_PTR;
@@ -205,17 +198,17 @@ static CK_RV encrypt(int slotNum, unsigned char *pin, unsigned char *label,
     CK_MECHANISM mechanism = {CKM_AES_CBC, iv, sizeof(iv)};
 
     clear_data_length = (CK_ULONG)in_data->length;
-    /* The data to encrypt must be a multiple of 16, required for AES to work */
+    
     if (clear_data_length % 16) {
         clear_data_length += 16 - (clear_data_length % 16);
     }
-    /* Add 16 bytes because encrypt final does not accept the data bytes */
+    
     clear_data_length +=16;
 
     CK_BYTE_PTR ptr_clear_data;
     ptr_clear_data = (CK_BYTE *)(malloc(clear_data_length * sizeof(CK_BYTE)));
     memset(ptr_clear_data, 0, clear_data_length);
-    /* Copy the data into the bytes that will be encrypted */
+    
     memcpy(ptr_clear_data, (CK_BYTE *)(in_data->data), (size_t)in_data->length);
 
     rv = C_EncryptInit(hSession, &mechanism, hObject);
@@ -225,11 +218,11 @@ static CK_RV encrypt(int slotNum, unsigned char *pin, unsigned char *label,
         goto cleanup;
     }
 
-    /* For AES expect the encrypted size to be the same size as the clear data */
+    
     encrypted_data_length = clear_data_length;
     data_encrypted = (CK_BYTE *)malloc(encrypted_data_length * sizeof(CK_BYTE));
     memset(data_encrypted, 0, encrypted_data_length);
-    /* Keep track of how many parts have been encrypted */
+    
     int part_number = 0;
 
     while (rv == CKR_OK && part_number * 16 < (int)encrypted_data_length - 16) {
@@ -250,9 +243,6 @@ static CK_RV encrypt(int slotNum, unsigned char *pin, unsigned char *label,
         goto cleanup;
     }
 
-    /* Add 56 more bytes. 16 bytes will hold the iv
-       The next 8 bytes will be an unsigned long (uint64_t) that indicates the original data length
-       The last 32 bytes are for the HMAC */
     long out_data_length = (long)(encrypted_data_length + (long unsigned int)iv_data->length + sizeof(uint64_t) + expected_md_len);
     if (out_data->data) {
         free(out_data->data);
@@ -263,23 +253,20 @@ static CK_RV encrypt(int slotNum, unsigned char *pin, unsigned char *label,
     uint8_t * ptr_out_data = (uint8_t *)(out_data->data);
     memset(ptr_out_data, 255, (size_t)out_data_length);
 
-    /* Copy the encrypted bytes, leaving the last 56 bytes alone */
+    
     memcpy(out_data->data, data_encrypted, encrypted_data_length);
 
-    /* Copy the iv into the bytes after the encrypted data */
+    
     for (i=0; i < iv_data->length; i++) {
          memcpy((uint64_t *)(ptr_out_data + encrypted_data_length +i), &iv[i], 1);
     }
 
-    /* In the next 8 bytes, write the original input data length
-       before it was forced to be a multiple of 16
-       This is so decrypt can know how much clear data there was */
     *((uint64_t *)(ptr_out_data + out_data_length - sizeof(uint64_t) - expected_md_len)) = (uint64_t)in_data->length;
 
-    /* Calculate the HMAC of the output */
+    
     unsigned char *md_value;
     unsigned int md_len;
-    /* Append the HMAC */
+    
     get_MAC(ptr_out_data, (size_t)out_data_length - expected_md_len, &md_value, &md_len);
     for (i=0; i < md_len; i++) {
         memcpy((uint64_t *)(ptr_out_data + out_data_length - expected_md_len + i), &md_value[i], 1);
@@ -306,23 +293,23 @@ static binary_data* read_input_file(const char * filename) {
         data->length = 0;
         void *buff = NULL;
         long end_position;
-        /* Open the file for reading in binary mode */
+        
         FILE *f_in = fopen(filename, "rb");
         if (f_in != NULL) {
-            /* Go to the end of the file */
+            
             const int seek_end_value = fseek(f_in, 0, SEEK_END);
             if (seek_end_value != -1) {
 
-                /* Get the position in the file (in bytes). This is the length. */
+                
                 end_position = ftell(f_in);
                 if (end_position != -1) {
-                    /* Go back to the beginning of the file */
+                    
                     const int seek_start_value = fseek(f_in, 0, SEEK_SET);
                     if (seek_start_value != -1) {
-                        /* Allocate enough space to read the whole file */
+                        
                         buff = (void*)malloc((size_t)end_position);
                         if (buff != NULL) {
-                            /* Read the whole file to buffer */
+                            
                             const long length = (const long)fread(buff, 1, (size_t)end_position, f_in);
                             if (length == end_position) {
                                 data->length = end_position;
@@ -422,12 +409,6 @@ static void process_command_line(int argc, char** argv, unsigned char** slot, un
     }
 }
 
-/*
- * **Usage function**
- * The usage function gives the information to run the application.
- * ./cert_encrypt_tpm -s<slotNo.> -p<pin> -l<key_lable> -f<input_file> -o<output_file>
- * For more options, use ./cert_encrypt_tpm --help
- */
 void usage(void)
 {
     printf("The slot number must be provided using the -s parameter\n"
@@ -474,7 +455,7 @@ int main(int argc, char** argv)
         return 0;
     }
 
-    /* Put iv array in a struct that has data and length */
+    
     iv_data = (binary_data *)malloc(sizeof(binary_data));
     iv_data->length = sizeof(iv);
     iv_data->data = malloc(sizeof(iv));
@@ -485,7 +466,7 @@ int main(int argc, char** argv)
     if (slotNum > 0 && pin[0] != '\0' && label[0] != '\0'
         && in_file[0] != '\0' && out_file[0] != '\0') {
         boolean_t rv_write_file = B_FALSE;
-        /* Get the data from the input file. This data will be encrypted */
+        
         in_data = read_input_file((const char*)in_file);
         out_data = (binary_data *)malloc(sizeof(binary_data));
         out_data->length = 0;
@@ -495,7 +476,7 @@ int main(int argc, char** argv)
             printf("Encryption failed\n");
         }
         if (out_data && out_data->data && out_data->length > 0) {
-            /* Write the encrypted data to the output file */
+            
             rv_write_file = write_output_file((const char*)out_file, out_data);
         }
         if (!rv_write_file) {

@@ -1,13 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2020 (c) Wind River Systems, Inc.
- *    Copyright 2020 (c) basysKom GmbH
- */
 
-#include <open62541/plugin/securitypolicy_default.h>
-#include <open62541/util.h>
+#include <opcua/plugin/securitypolicy_default.h>
+#include <opcua/util.h>
 
 #if defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL)
 
@@ -90,7 +83,7 @@ UA_Policy_Basic128Rsa15_Clear_Context (UA_SecurityPolicy *policy) {
         return;
     }
 
-    /* delete all allocated members in the context */
+    
 
     EVP_PKEY_free(ctx->localPrivateKey);
     EVP_PKEY_free(ctx->csrLocalPrivateKey);
@@ -121,7 +114,7 @@ updateCertificateAndPrivateKey_sp_basic128rsa15(UA_SecurityPolicy *securityPolic
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* Set the new private key */
+    
     EVP_PKEY_free(pc->localPrivateKey);
 
     pc->localPrivateKey = UA_OpenSSL_LoadPrivateKey(&newPrivateKey);
@@ -156,7 +149,7 @@ createSigningRequest_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy,
                                       const UA_KeyValueMap *params,
                                       UA_ByteString *csr,
                                       UA_ByteString *newPrivateKey) {
-    /* Check parameter */
+    
     if (securityPolicy == NULL || csr == NULL) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
@@ -172,7 +165,7 @@ createSigningRequest_sp_basic128rsa15(UA_SecurityPolicy *securityPolicy,
                                            csr, newPrivateKey);
 }
 
-/* create the channel context */
+
 
 static UA_StatusCode
 UA_ChannelModule_Basic128Rsa15_New_Context (const UA_SecurityPolicy * securityPolicy,
@@ -202,7 +195,7 @@ UA_ChannelModule_Basic128Rsa15_New_Context (const UA_SecurityPolicy * securityPo
         return retval;
     }
 
-    /* decode to X509 */
+    
     context->remoteCertificateX509 = UA_OpenSSL_LoadCertificate(&context->remoteCertificate);
     if (context->remoteCertificateX509 == NULL) {
         UA_ByteString_clear (&context->remoteCertificate);
@@ -222,7 +215,7 @@ UA_ChannelModule_Basic128Rsa15_New_Context (const UA_SecurityPolicy * securityPo
     return UA_STATUSCODE_GOOD;
 }
 
-/* delete the channel context */
+
 
 static void
 UA_ChannelModule_Basic128Rsa15_Delete_Context (void * channelContext) {
@@ -343,7 +336,7 @@ UA_Asy_Basic128Rsa15_compareCertificateThumbprint (const UA_SecurityPolicy * sec
     return UA_STATUSCODE_GOOD;
 }
 
-/* Generates a thumbprint for the specified certificate */
+
 
 static UA_StatusCode
 UA_Asy_Basic128Rsa15_makeCertificateThumbprint (const UA_SecurityPolicy * securityPolicy,
@@ -500,7 +493,7 @@ UA_Sym_Basic128Rsa15_generateKey(void *policyContext,
 
 static size_t
 UA_SymEn_Basic128Rsa15_getLocalKeyLength (const void *channelContext) {
-    /* 16 bytes 128 bits */
+    
     return UA_SECURITYPOLICY_BASIC128RSA15_SYM_ENCRYPTION_KEY_LENGTH;
 }
 
@@ -567,7 +560,7 @@ UA_SymSig_Basic128Rsa15_Sign (void *                    channelContext,
     return UA_OpenSSL_HMAC_SHA1_Sign (message, &cc->localSymSigningKey, signature);
 }
 
-/* the main entry of Basic128Rsa15 */
+
 
 UA_StatusCode
 UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
@@ -591,7 +584,7 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     policy->certificateTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_RSAMINAPPLICATIONCERTIFICATETYPE);
     policy->securityLevel = 0;
 
-    /* set ChannelModule context  */
+    
 
     channelModule->newContext = UA_ChannelModule_Basic128Rsa15_New_Context;
     channelModule->deleteContext = UA_ChannelModule_Basic128Rsa15_Delete_Context;
@@ -609,12 +602,12 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     if (retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* asymmetricModule */
+    
 
     asymmetricModule->compareCertificateThumbprint = UA_Asy_Basic128Rsa15_compareCertificateThumbprint;
     asymmetricModule->makeCertificateThumbprint = UA_Asy_Basic128Rsa15_makeCertificateThumbprint;
 
-    /* AsymmetricModule - signature algorithm */
+    
 
     UA_SecurityPolicySignatureAlgorithm * asySigAlgorithm =
                     &asymmetricModule->cryptoModule.signatureAlgorithm;
@@ -626,7 +619,7 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     asySigAlgorithm->verify = UA_AsySig_Basic128Rsa15_Verify;
     asySigAlgorithm->sign = UA_AsySig_Basic128Rsa15_Sign;
 
-    /*  AsymmetricModule encryption algorithm */
+    
 
     UA_SecurityPolicyEncryptionAlgorithm * asymEncryAlg =
         &asymmetricModule->cryptoModule.encryptionAlgorithm;
@@ -638,13 +631,13 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     asymEncryAlg->decrypt = UA_AsymEn_Basic128Rsa15_Decrypt;
     asymEncryAlg->encrypt = UA_AsymEn_Basic128Rsa15_Encrypt;
 
-    /* SymmetricModule */
+    
 
-    symmetricModule->secureChannelNonceLength = 16;  /* 128 bits*/
+    symmetricModule->secureChannelNonceLength = 16;  
     symmetricModule->generateNonce = UA_Sym_Basic128Rsa15_generateNonce;
     symmetricModule->generateKey = UA_Sym_Basic128Rsa15_generateKey;
 
-    /* Symmetric encryption Algorithm */
+    
 
     UA_SecurityPolicyEncryptionAlgorithm * symEncryptionAlgorithm =
         &symmetricModule->cryptoModule.encryptionAlgorithm;
@@ -656,7 +649,7 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     symEncryptionAlgorithm->decrypt = UA_SymEn_Basic128Rsa15_Decrypt;
     symEncryptionAlgorithm->encrypt = UA_SymEn_Basic128Rsa15_Encrypt;
 
-    /* Symmetric signature Algorithm */
+    
 
     UA_SecurityPolicySignatureAlgorithm * symSignatureAlgorithm =
         &symmetricModule->cryptoModule.signatureAlgorithm;
@@ -669,7 +662,7 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     symSignatureAlgorithm->verify = UA_SymSig_Basic128Rsa15_Verify;
     symSignatureAlgorithm->sign = UA_SymSig_Basic128Rsa15_Sign;
 
-    /* set the policy context */
+    
 
     retval = UA_Policy_Basic128Rsa15_New_Context (policy, localPrivateKey, logger);
     if (retval != UA_STATUSCODE_GOOD) {
@@ -681,8 +674,6 @@ UA_SecurityPolicy_Basic128Rsa15 (UA_SecurityPolicy * policy,
     policy->createSigningRequest = createSigningRequest_sp_basic128rsa15;
     policy->clear = UA_Policy_Basic128Rsa15_Clear_Context;
 
-    /* Use the same signature algorithm as the asymmetric component for
-       certificate signing (see standard) */
     policy->certificateSigningAlgorithm = policy->asymmetricModule.cryptoModule.signatureAlgorithm;
 
     return UA_STATUSCODE_GOOD;

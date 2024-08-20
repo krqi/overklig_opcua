@@ -1,12 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2019 (c) Holger Zipper, ifak
- */
 
-#include <open62541/plugin/securitypolicy_default.h>
-#include <open62541/util.h>
+#include <opcua/plugin/securitypolicy_default.h>
+#include <opcua/util.h>
 
 #ifdef UA_ENABLE_ENCRYPTION_MBEDTLS
 
@@ -22,11 +16,6 @@
 #include <mbedtls/version.h>
 #include <mbedtls/x509_crt.h>
 
-/* Orinigal Notes:
- * mbedTLS' AES allows in-place encryption and decryption. Sow we don't have to
- * allocate temp buffers.
- * https://tls.mbed.org/discussions/generic/in-place-decryption-with-aes256-same-input-output-buffer
- */
 
 #define UA_SHA256_LENGTH 32
 #define UA_AES128CTR_SIGNING_KEY_LENGTH 32
@@ -35,8 +24,6 @@
 #define UA_AES128CTR_MESSAGENONCE_LENGTH 8
 #define UA_AES128CTR_ENCRYPTION_BLOCK_SIZE 16
 #define UA_AES128CTR_PLAIN_TEXT_BLOCK_SIZE 16
-/* counter block=keynonce(4Byte)+Messagenonce(8Byte)+counter(4Byte) see Part14
- * 7.2.2.2.3.2 for details */
 #define UA_AES128CTR_COUNTERBLOCK_SIZE 16
 
 typedef struct {
@@ -54,11 +41,11 @@ typedef struct {
     UA_Byte messageNonce[UA_AES128CTR_MESSAGENONCE_LENGTH];
 } PUBSUB_AES128CTR_ChannelContext;
 
-/*******************/
-/* SymmetricModule */
-/*******************/
 
-/* Signature and verify all using HMAC-SHA2-256, nothing to change */
+
+
+
+
 static UA_StatusCode
 verify_sp_pubsub_aes128ctr(PUBSUB_AES128CTR_ChannelContext *cc,
                            const UA_ByteString *message,
@@ -66,7 +53,7 @@ verify_sp_pubsub_aes128ctr(PUBSUB_AES128CTR_ChannelContext *cc,
     if(cc == NULL || message == NULL || signature == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Compute MAC */
+    
     if(signature->length != UA_SHA256_LENGTH)
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 
@@ -79,7 +66,7 @@ verify_sp_pubsub_aes128ctr(PUBSUB_AES128CTR_ChannelContext *cc,
     if(mbedtls_hmac(&pc->sha256MdContext, &signingKey, message, mac) != UA_STATUSCODE_GOOD)
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 
-    /* Compare with Signature */
+    
     if(!UA_constantTimeEqual(signature->data, mac, UA_SHA256_LENGTH))
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
     return UA_STATUSCODE_GOOD;
@@ -131,19 +118,17 @@ encrypt_sp_pubsub_aes128ctr(const PUBSUB_AES128CTR_ChannelContext *cc,
     if(cc == NULL || data == NULL)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* CTR mode does not need padding */
+    
 
-    /* Decode the header to Extract the message nonce */
+    
 
-    /* Keylength in bits */
+    
     unsigned int keylength = (unsigned int)(UA_AES128CTR_KEY_LENGTH * 8);
     mbedtls_aes_context aesContext;
     int mbedErr = mbedtls_aes_setkey_enc(&aesContext, cc->encryptingKey, keylength);
     if(mbedErr)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Prepare the counterBlock required for encryption/decryption 
-     * Block counter starts at 1 according to part 14 (7.2.2.4.3.2)*/
     UA_Byte counterBlockCopy[UA_AES128CTR_ENCRYPTION_BLOCK_SIZE];
     UA_Byte counterInitialValue[4] = {0,0,0,1};
     memcpy(counterBlockCopy, cc->keyNonce, UA_AES128CTR_KEYNONCE_LENGTH);
@@ -161,23 +146,19 @@ encrypt_sp_pubsub_aes128ctr(const PUBSUB_AES128CTR_ChannelContext *cc,
     return UA_STATUSCODE_GOOD;
 }
 
-/* a decryption function is exactly the same as an encryption one, since they all do XOR
- * operations*/
 static UA_StatusCode
 decrypt_sp_pubsub_aes128ctr(const PUBSUB_AES128CTR_ChannelContext *cc,
                             UA_ByteString *data) {
     return encrypt_sp_pubsub_aes128ctr(cc, data);
 }
 
-/*Tested, meeting  Profile*/
+
 static UA_StatusCode
 generateKey_sp_pubsub_aes128ctr(void *policyContext, const UA_ByteString *secret,
                                 const UA_ByteString *seed, UA_ByteString *out) {
     return UA_STATUSCODE_BADNOTIMPLEMENTED;
 }
 
-/* This nonce does not need to be a cryptographically random number, it can be
- * pseudo-random */
 static UA_StatusCode
 generateNonce_sp_pubsub_aes128ctr(void *policyContext, UA_ByteString *out) {
     if(policyContext == NULL || out == NULL)
@@ -190,9 +171,9 @@ generateNonce_sp_pubsub_aes128ctr(void *policyContext, UA_ByteString *out) {
     return UA_STATUSCODE_GOOD;
 }
 
-/*****************/
-/* ChannelModule */
-/*****************/
+
+
+
 
 static void
 channelContext_deleteContext_sp_pubsub_aes128ctr(PUBSUB_AES128CTR_ChannelContext *cc) {
@@ -210,13 +191,13 @@ channelContext_newContext_sp_pubsub_aes128ctr(void *policyContext,
        (keyNonce && keyNonce->length != UA_AES128CTR_KEYNONCE_LENGTH))
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 
-    /* Allocate the channel context */
+    
     PUBSUB_AES128CTR_ChannelContext *cc = (PUBSUB_AES128CTR_ChannelContext *)
         UA_calloc(1, sizeof(PUBSUB_AES128CTR_ChannelContext));
     if(cc == NULL)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
-    /* Initialize the channel context */
+    
     cc->policyContext = (PUBSUB_AES128CTR_PolicyContext *)policyContext;
     if(signingKey)
         memcpy(cc->signingKey, signingKey->data, signingKey->length);
@@ -262,7 +243,7 @@ deleteMembers_sp_pubsub_aes128ctr(UA_PubSubSecurityPolicy *securityPolicy) {
     if(securityPolicy->policyContext == NULL)
         return;
 
-    /* delete all allocated members in the context */
+    
     PUBSUB_AES128CTR_PolicyContext *pc =
         (PUBSUB_AES128CTR_PolicyContext *)securityPolicy->policyContext;
 
@@ -289,14 +270,14 @@ policyContext_newContext_sp_pubsub_aes128ctr(UA_PubSubSecurityPolicy *securityPo
         goto error;
     }
 
-    /* Initialize the PolicyContext */
+    
     memset(pc, 0, sizeof(PUBSUB_AES128CTR_PolicyContext));
     mbedtls_ctr_drbg_init(&pc->drbgContext);
     mbedtls_entropy_init(&pc->entropyContext);
     mbedtls_md_init(&pc->sha256MdContext);
     pc->securityPolicy = securityPolicy;
 
-    /* Initialized the message digest */
+    
     const mbedtls_md_info_t *const mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
     int mbedErr = mbedtls_md_setup(&pc->sha256MdContext, mdInfo, MBEDTLS_MD_SHA256);
     if(mbedErr) {
@@ -311,8 +292,8 @@ policyContext_newContext_sp_pubsub_aes128ctr(UA_PubSubSecurityPolicy *securityPo
         goto error;
     }
 
-    /* Seed the RNG */
-    char *personalization = "open62541-drbg";
+    
+    char *personalization = "opcua-drbg";
     mbedErr = mbedtls_ctr_drbg_seed(&pc->drbgContext, mbedtls_entropy_func,
                                     &pc->entropyContext,
                                     (const unsigned char *)personalization, 14);
@@ -342,7 +323,7 @@ UA_PubSubSecurityPolicy_Aes128Ctr(UA_PubSubSecurityPolicy *policy,
 
     UA_SecurityPolicySymmetricModule *symmetricModule = &policy->symmetricModule;
 
-    /* SymmetricModule */
+    
     symmetricModule->generateKey = generateKey_sp_pubsub_aes128ctr;
     symmetricModule->generateNonce = generateNonce_sp_pubsub_aes128ctr;
 
@@ -364,7 +345,7 @@ UA_PubSubSecurityPolicy_Aes128Ctr(UA_PubSubSecurityPolicy *policy,
     UA_SecurityPolicyEncryptionAlgorithm *encryptionAlgorithm =
         &symmetricModule->cryptoModule.encryptionAlgorithm;
     encryptionAlgorithm->uri =
-        UA_STRING("https://tools.ietf.org/html/rfc3686"); /* Temp solution */
+        UA_STRING("https://tools.ietf.org/html/rfc3686"); 
     encryptionAlgorithm->encrypt =
         (UA_StatusCode(*)(void *, UA_ByteString *))encrypt_sp_pubsub_aes128ctr;
     encryptionAlgorithm->decrypt =
@@ -380,7 +361,7 @@ UA_PubSubSecurityPolicy_Aes128Ctr(UA_PubSubSecurityPolicy *policy,
     symmetricModule->secureChannelNonceLength = UA_AES128CTR_SIGNING_KEY_LENGTH +
         UA_AES128CTR_KEY_LENGTH + UA_AES128CTR_KEYNONCE_LENGTH;
 
-    /* ChannelModule */
+    
     policy->newContext = channelContext_newContext_sp_pubsub_aes128ctr;
     policy->deleteContext = (void (*)(void *))
         channelContext_deleteContext_sp_pubsub_aes128ctr;
@@ -394,7 +375,7 @@ UA_PubSubSecurityPolicy_Aes128Ctr(UA_PubSubSecurityPolicy *policy,
     policy->clear = deleteMembers_sp_pubsub_aes128ctr;
     policy->policyContext = NULL;
 
-    /* Initialize the policyContext */
+    
     return policyContext_newContext_sp_pubsub_aes128ctr(policy);
 }
 

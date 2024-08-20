@@ -1,6 +1,6 @@
 version: '{build}'
 
-clone_folder: c:\projects\open62541
+clone_folder: c:\projects\opcua
 
 # Do not set clone depth, we need all the tags to automatically detect the version based on git describe
 # clone_depth: 20

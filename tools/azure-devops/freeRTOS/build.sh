@@ -25,7 +25,7 @@ cmake \
     ${BASE_DIR}
 if [ $? -ne 0 ] ; then exit 1 ; fi
 
-make -j open62541-code-generation
+make -j opcua-code-generation
 if [ $? -ne 0 ] ; then exit 1 ; fi
 
 # Now call the freeRTOS CMake with same arguments

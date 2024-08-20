@@ -1,25 +1,16 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. 
- *
- *    Copyright 2021-2022 (c) Julius Pfrommer
- */
 
 #include "ziptree.h"
 
-/* Dummy types */
+
 struct zip_elem;
 typedef struct zip_elem zip_elem;
 typedef ZIP_ENTRY(zip_elem) zip_entry;
 typedef ZIP_HEAD(, zip_elem) zip_head;
 
-/* Access macros */
+
 #define ZIP_ENTRY_PTR(x) ((zip_entry*)((char*)x + fieldoffset))
 #define ZIP_KEY_PTR(x) (const void*)((const char*)x + keyoffset)
 
-/* Hash pointers to keep the tie-breeaking of equal keys (mostly) uncorrelated
- * from the rank (pointer order). Hashing code taken from sdbm-hash
- * (http://www.cse.yorku.ca/~oz/hash.html). */
 static unsigned int
 __ZIP_PTR_HASH(const void *p) {
     unsigned int h = 0;
@@ -31,7 +22,7 @@ __ZIP_PTR_HASH(const void *p) {
 
 static ZIP_INLINE enum ZIP_CMP
 __ZIP_RANK_CMP(const void *p1, const void *p2) {
-    /* assert(p1 != p2); */
+    
     unsigned int h1 = __ZIP_PTR_HASH(p1);
     unsigned int h2 = __ZIP_PTR_HASH(p2);
     if(h1 == h2)
@@ -73,8 +64,6 @@ __ZIP_VALIDATE(zip_cmp_cb cmp, unsigned short fieldoffset,
 }
 #endif
 
-/* Walk down the right-side spine of cur. Elements that are larger than x_key
- * are moved under x->right. */
 static void
 __ZIP_INSERT_MOVE_RIGHT(zip_cmp_cb cmp, unsigned short fieldoffset,
                         unsigned short keyoffset, const void *x_key,
@@ -123,15 +112,13 @@ __ZIP_INSERT(void *h, zip_cmp_cb cmp, unsigned short fieldoffset,
         return;
     }
 
-    /* Go down the tree to find the top element "cur" that has a rank smaller
-     * than "x" */
     zip_elem *prev = NULL;
     zip_elem *cur = head->root;
     enum ZIP_CMP cur_order, prev_order;
     do {
         cur_order = __ZIP_UNIQUE_CMP(cmp, x_key, ZIP_KEY_PTR(cur));
         if(cur_order == ZIP_CMP_EQ)
-            return; /* x is already inserted */
+            return; 
         if(__ZIP_RANK_CMP(cur, x) == ZIP_CMP_LESS)
             break;
         prev = cur;
@@ -140,7 +127,7 @@ __ZIP_INSERT(void *h, zip_cmp_cb cmp, unsigned short fieldoffset,
             ZIP_ENTRY_PTR(cur)->right : ZIP_ENTRY_PTR(cur)->left;
     } while(cur);
 
-    /* Insert "x" instead of "cur" under its parent "prev" */
+    
     if(cur == head->root) {
         head->root = x;
     } else {
@@ -153,8 +140,6 @@ __ZIP_INSERT(void *h, zip_cmp_cb cmp, unsigned short fieldoffset,
     if(!cur)
         return;
 
-    /* Re-insert "cur" under "x". Repair by moving elements that ended up on the
-     * wrong side of "x". */
     if(cur_order == ZIP_CMP_MORE) {
         ZIP_ENTRY_PTR(x)->left = cur;
         __ZIP_INSERT_MOVE_RIGHT(cmp, fieldoffset, keyoffset,
@@ -265,9 +250,6 @@ __ZIP_ZIP(unsigned short fieldoffset, void *left, void *right) {
     return root;
 }
 
-/* Walk down from cur and move all elements <= split-key to the left side. All
- * elements that are moved over have to be below left_rightmost. Returns the
- * hierarchy of elements that remain on the right side. */
 static void
 __ZIP_UNZIP_MOVE_LEFT(zip_cmp_cb cmp, unsigned short fieldoffset,
                       unsigned short keyoffset, const void *key,
@@ -302,8 +284,6 @@ __ZIP_UNZIP_MOVE_RIGHT(zip_cmp_cb cmp, unsigned short fieldoffset,
     }
 }
 
-/* Split the tree into a left side with keys <= split-key and a right side with
- * key > split-key. */
 void
 __ZIP_UNZIP(zip_cmp_cb cmp, unsigned short fieldoffset,
             unsigned short keyoffset, const void *key,

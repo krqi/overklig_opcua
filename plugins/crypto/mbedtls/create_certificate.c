@@ -1,12 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright (c) 2023 Fraunhofer IOSB (Author: Noel Graf)
- *
- */
 
-#include <open62541/plugin/create_certificate.h>
+#include <opcua/plugin/create_certificate.h>
 #include <time.h>
 
 #include "securitypolicy_common.h"
@@ -62,9 +55,9 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
        (certFormat != UA_CERTIFICATEFORMAT_DER && certFormat != UA_CERTIFICATEFORMAT_PEM))
         return UA_STATUSCODE_BADINVALIDARGUMENT;
 
-    /* Use the maximum size */
+    
     UA_UInt16 keySizeBits = 4096;
-    /* Default to 1 year */
+    
     UA_UInt16 expiresInDays = 365;
 
     if(params) {
@@ -90,13 +83,13 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
 
     UA_StatusCode errRet = UA_STATUSCODE_GOOD;
 
-    /* Set to sane values */
+    
     mbedtls_pk_init(&key);
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
     mbedtls_x509write_crt_init(&crt);
 
-    /* Seed the random number generator */
+    
     if (mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char *)pers, strlen(pers)) != 0) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
                      "Failed to initialize the random number generator.");
@@ -104,7 +97,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
         goto cleanup;
     }
 
-    /* Generate an RSA key pair */
+    
     if (mbedtls_pk_setup(&key, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA)) != 0 ||
         mbedtls_rsa_gen_key(mbedtls_pk_rsa(key), mbedtls_ctr_drbg_random, &ctr_drbg, keySizeBits, 65537) != 0) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
@@ -113,7 +106,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
         goto cleanup;
     }
 
-    /* Setting certificate values */
+    
     mbedtls_x509write_crt_set_version(&crt, MBEDTLS_X509_CRT_VERSION_3);
     mbedtls_x509write_crt_set_md_alg(&crt, MBEDTLS_MD_SHA256);
 
@@ -168,9 +161,9 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
         char *subAlt = (char *)UA_malloc(subjectAltName[i].length + 1);
         memcpy(subAlt, subjectAltName[i].data, subjectAltName[i].length);
 
-        /* null-terminate the copied string */
+        
         subAlt[subjectAltName[i].length] = 0;
-        /* split into SAN type and value */
+        
         sanType = strtok(subAlt, ":");
         sanValue = (char *)subjectAltName[i].data + strlen(sanType) + 1;
         sanValueLength = strlen(sanValue);
@@ -251,21 +244,21 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
     mbedtls_mpi_free(&serial_mpi);
 #endif
 
-    /* Get the current time */
+    
     time_t rawTime;
     struct tm *timeInfo;
     time(&rawTime);
     timeInfo = gmtime(&rawTime);
 
-    /* Format the current timestamp */
+    
     char current_timestamp[15];  // YYYYMMDDhhmmss + '\0'
     strftime(current_timestamp, sizeof(current_timestamp), "%Y%m%d%H%M%S", timeInfo);
 
-    /* Calculate the future timestamp */
+    
     timeInfo->tm_mday += expiresInDays;
     time_t future_time = mktime(timeInfo);
 
-    /* Format the future timestamp */
+    
     char future_timestamp[15];  // YYYYMMDDhhmmss + '\0'
     strftime(future_timestamp, sizeof(future_timestamp), "%Y%m%d%H%M%S", gmtime(&future_time));
 
@@ -316,7 +309,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
     mbedtls_x509write_crt_set_issuer_key(&crt, &key);
 
 
-    /* Write private key */
+    
     if ((write_private_key(&key, certFormat, outPrivateKey)) != 0) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
                      "Create Certificate: Writing private key failed.");
@@ -324,7 +317,7 @@ UA_CreateCertificate(const UA_Logger *logger, const UA_String *subject,
         goto cleanup;
     }
 
-    /* Write Certificate */
+    
     if ((write_certificate(&crt, certFormat, outCertificate,
                                  mbedtls_ctr_drbg_random, &ctr_drbg)) != 0) {
         UA_LOG_ERROR(logger, UA_LOGCATEGORY_SECURECHANNEL,
@@ -428,12 +421,12 @@ int mbedtls_x509write_crt_set_ext_key_usage(mbedtls_x509write_cert *ctx,
 
     memset(buf, 0, sizeof(buf));
 
-    /* We need at least one extension: SEQUENCE SIZE (1..MAX) OF KeyPurposeId */
+    
     if(!exts) {
         return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
     }
 
-    /* Iterate over exts backwards, so we write them out in the requested order */
+    
     while(last_ext != exts) {
         for(ext = exts; ext->next != last_ext; ext = ext->next) {
         }
@@ -475,7 +468,7 @@ int mbedtls_x509write_crt_set_subject_alt_name(mbedtls_x509write_cert *ctx, cons
     size_t len;
     size_t buflen = 0;
 
-    /* How many alt names to be written */
+    
     sandeep = mbedtls_get_san_list_deep(sanlist);
     if (sandeep == 0)
         return ret;
@@ -503,7 +496,7 @@ int mbedtls_x509write_crt_set_subject_alt_name(mbedtls_x509write_cert *ctx, cons
                                                                      MBEDTLS_ASN1_CONTEXT_SPECIFIC | cur->node.type));
             break;
         default:
-            /* Error out on an unsupported SAN */
+            
             ret = MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE;
             goto cleanup;
         }

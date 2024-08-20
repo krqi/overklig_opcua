@@ -1,15 +1,10 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2023 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-#include <open62541/server_config_file_based.h>
-#include <open62541/plugin/log_stdout.h>
+#include <opcua/server_config_file_based.h>
+#include <opcua/plugin/log_stdout.h>
 #include "cj5.h"
-#include "open62541/server_config_default.h"
+#include "opcua/server_config_default.h"
 #ifdef UA_ENABLE_ENCRYPTION
-#include "open62541/plugin/certificategroup_default.h"
+#include "opcua/plugin/certificategroup_default.h"
 #endif
 
 #define MAX_TOKENS 256
@@ -38,7 +33,7 @@ getJsonPart(cj5_token tok, const char *json) {
     }
 }
 
-/* Forward declarations*/
+
 #define PARSE_JSON(TYPE) static UA_StatusCode                   \
     TYPE##_parseJson(ParsingCtx *ctx, void *configField, size_t *configFieldSize)
 
@@ -50,11 +45,9 @@ static UA_ByteString
 loadCertificateFile(const char *const path);
 #endif
 
-/* The DataType "kind" is an internal type classification. It is used to
- * dispatch handling to the correct routines. */
 #define UA_SERVERCONFIGFIELDKINDS 25
 typedef enum {
-    /* Basic Types */
+    
     UA_SERVERCONFIGFIELD_INT64 = 0,
     UA_SERVERCONFIGFIELD_UINT16,
     UA_SERVERCONFIGFIELD_UINT32,
@@ -67,7 +60,7 @@ typedef enum {
     UA_SERVERCONFIGFIELD_DURATIONRANGE,
     UA_SERVERCONFIGFIELD_UINT32RANGE,
 
-    /* Advanced Types */
+    
     UA_SERVERCONFIGFIELD_BUILDINFO,
     UA_SERVERCONFIGFIELD_APPLICATIONDESCRIPTION,
     UA_SERVERCONFIGFIELD_STRINGARRAY,
@@ -81,14 +74,14 @@ typedef enum {
     UA_SERVERCONFIGFIELD_SECURITYPOLICIES,
     UA_SERVERCONFIGFIELD_SECURITYPKI,
 
-    /* Enumerations */
+    
     UA_SERVERCONFIGFIELD_APPLICATIONTYPE,
     UA_SERVERCONFIGFIELD_RULEHANDLING
 } UA_ServerConfigFieldKind;
 
 extern const parseJsonSignature parseJsonJumpTable[UA_SERVERCONFIGFIELDKINDS];
 
-/*----------------------Basic Types------------------------*/
+
 PARSE_JSON(Int64Field) {
     cj5_token tok = ctx->tokens[++ctx->index];
     UA_ByteString buf = getJsonPart(tok, ctx->json);
@@ -148,12 +141,6 @@ PARSE_JSON(StringField) {
     return retval;
 }
 PARSE_JSON(LocalizedTextField) {
-    /*
-     applicationName: {
-        locale: "de-DE",
-        text: "Test text"
-    }
-     */
     cj5_token tok = ctx->tokens[++ctx->index];
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     UA_String locale;
@@ -219,7 +206,7 @@ PARSE_JSON(BooleanField) {
     }else {
         out = false;
     }
-    /* set server config field */
+    
     UA_Boolean *field = (UA_Boolean *)configField;
     *field = out;
     return UA_STATUSCODE_GOOD;
@@ -286,7 +273,7 @@ PARSE_JSON(UInt32RangeField) {
     return UA_STATUSCODE_GOOD;
 }
 
-/*----------------------Advanced Types------------------------*/
+
 PARSE_JSON(BuildInfo) {
     UA_BuildInfo *field = (UA_BuildInfo*)configField;
     cj5_token tok = ctx->tokens[++ctx->index];
@@ -371,7 +358,7 @@ PARSE_JSON(StringArrayField) {
         UA_String_copy(&out, &stringArray[stringArraySize++]);
         UA_String_clear(&out);
     }
-    /* Add to the config */
+    
     UA_String **field = (UA_String**)configField;
     if(*configFieldSize > 0) {
         UA_Array_delete(*field, *configFieldSize,
@@ -384,7 +371,7 @@ PARSE_JSON(StringArrayField) {
                       (void**)field, &UA_TYPES[UA_TYPES_STRING]);
     *configFieldSize = stringArraySize;
 
-    /* Clean up */
+    
     UA_Array_delete(stringArray, stringArraySize, &UA_TYPES[UA_TYPES_STRING]);
     return retval;
 }
@@ -403,7 +390,7 @@ PARSE_JSON(UInt32ArrayField) {
             continue;
         numberArray[numberArraySize++] = value;
     }
-    /* Add to the config */
+    
     UA_UInt32 **field = (UA_UInt32**)configField;
     if(*configFieldSize > 0) {
         UA_Array_delete(*field, *configFieldSize,
@@ -417,7 +404,7 @@ PARSE_JSON(UInt32ArrayField) {
                           (void **)field, &UA_TYPES[UA_TYPES_UINT32]);
         *configFieldSize = numberArraySize;
     }
-    /* Clean up */
+    
     UA_Array_delete(numberArray, numberArraySize, &UA_TYPES[UA_TYPES_UINT32]);
     return retval;
 }
@@ -451,7 +438,7 @@ PARSE_JSON(MdnsConfigurationField) {
                 parseJsonJumpTable[UA_SERVERCONFIGFIELD_STRINGARRAY](ctx, &config->mdnsConfig.serverCapabilities, &config->mdnsConfig.serverCapabilitiesSize);
             else if(strcmp(field_str, "mdnsInterfaceIP") == 0)
                 parseJsonJumpTable[UA_SERVERCONFIGFIELD_STRING](ctx, &config->mdnsInterfaceIP, NULL);
-            /* mdnsIpAddressList and mdnsIpAddressListSize are only available if UA_HAS_GETIFADDR is not defined: */
+            
 # if !defined(UA_HAS_GETIFADDR)
             else if(strcmp(field_str, "mdnsIpAddressList") == 0)
                 parseJsonJumpTable[UA_SERVERCONFIGFIELD_UINT32ARRAY](ctx, &config->mdnsIpAddressList, &config->mdnsIpAddressListSize);
@@ -713,7 +700,7 @@ PARSE_JSON(SecurityPolciesField) {
         }
         UA_StatusCode retval = UA_STATUSCODE_GOOD;
         if(UA_String_equal(&policy, &noneuri)) {
-            /* Nothing to do! */
+            
         } else if(UA_String_equal(&policy, &basic128Rsa15uri)) {
             retval = UA_ServerConfig_addSecurityPolicyBasic128Rsa15(config, &certificate, &privateKey);
             if(retval != UA_STATUSCODE_GOOD) {
@@ -746,7 +733,7 @@ PARSE_JSON(SecurityPolciesField) {
             UA_LOG_WARNING(config->logging, UA_LOGCATEGORY_USERLAND, "Unknown Security Policy.");
         }
 
-        /* Add all Endpoints */
+        
         UA_ServerConfig_addAllEndpoints(config);
 
         if(policy.length > 0)
@@ -772,11 +759,11 @@ PARSE_JSON(SecurityPkiField) {
         return retval;
 
 #ifndef __linux__
-    /* Currently not supported! */
+    
     (void)config;
     return UA_STATUSCODE_GOOD;
 #else
-    /* Set up the parameters */
+    
     UA_KeyValuePair params[2];
     size_t paramsSize = 2;
 
@@ -789,7 +776,7 @@ PARSE_JSON(SecurityPkiField) {
     paramsMap.map = params;
     paramsMap.mapSize = paramsSize;
 
-    /* set server config field */
+    
     UA_NodeId defaultApplicationGroup =
            UA_NODEID_NUMERIC(0, UA_NS0ID_SERVERCONFIGURATION_CERTIFICATEGROUPS_DEFAULTAPPLICATIONGROUP);
     retval = UA_CertificateGroup_Filestore(&config->secureChannelPKI, &defaultApplicationGroup,
@@ -808,14 +795,14 @@ PARSE_JSON(SecurityPkiField) {
         return retval;
     }
 
-    /* Clean up */
+    
     UA_String_clear(&pkiFolder);
 #endif
 #endif
     return UA_STATUSCODE_GOOD;
 }
 
-/*----------------------Enumerations------------------------*/
+
 PARSE_JSON(ApplicationTypeField) {
     UA_UInt32 enum_value;
     UA_StatusCode retval = UInt32Field_parseJson(ctx, &enum_value, NULL);
@@ -836,7 +823,7 @@ PARSE_JSON(RuleHandlingField) {
 }
 
 const parseJsonSignature parseJsonJumpTable[UA_SERVERCONFIGFIELDKINDS] = {
-    /* Basic Types */
+    
     (parseJsonSignature)Int64Field_parseJson,
     (parseJsonSignature)UInt16Field_parseJson,
     (parseJsonSignature)UInt32Field_parseJson,
@@ -849,7 +836,7 @@ const parseJsonSignature parseJsonJumpTable[UA_SERVERCONFIGFIELDKINDS] = {
     (parseJsonSignature)DurationRangeField_parseJson,
     (parseJsonSignature)UInt32RangeField_parseJson,
 
-    /* Advanced Types */
+    
     (parseJsonSignature)BuildInfo_parseJson,
     (parseJsonSignature)ApplicationDescriptionField_parseJson,
     (parseJsonSignature)StringArrayField_parseJson,
@@ -863,7 +850,7 @@ const parseJsonSignature parseJsonJumpTable[UA_SERVERCONFIGFIELDKINDS] = {
     (parseJsonSignature)SecurityPolciesField_parseJson,
     (parseJsonSignature)SecurityPkiField_parseJson,
 
-    /* Enumerations */
+    
     (parseJsonSignature)ApplicationTypeField_parseJson,
     (parseJsonSignature)RuleHandlingField_parseJson,
 };
@@ -1030,14 +1017,14 @@ static UA_ByteString
 loadCertificateFile(const char *const path) {
     UA_ByteString fileContents = UA_STRING_NULL;
 
-    /* Open the file */
+    
     FILE *fp = fopen(path, "rb");
     if(!fp) {
-        errno = 0; /* We read errno also from the tcp layer... */
+        errno = 0; 
         return fileContents;
     }
 
-    /* Get the file length, allocate the data and read */
+    
     fseek(fp, 0, SEEK_END);
     fileContents.length = (size_t)ftell(fp);
     fileContents.data = (UA_Byte *)UA_malloc(fileContents.length * sizeof(UA_Byte));

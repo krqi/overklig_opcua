@@ -1,14 +1,3 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2016-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2016 (c) Lorenz Haas
- *    Copyright 2017 (c) frax2222
- *    Copyright 2017 (c) Florian Palm
- *    Copyright 2017-2018 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Julian Grothoff
- */
 
 #include "ua_server_internal.h"
 
@@ -17,21 +6,19 @@ UA_Server_findDataType(UA_Server *server, const UA_NodeId *typeId) {
     return UA_findDataTypeWithCustom(typeId, server->config.customDataTypes);
 }
 
-/********************************/
-/* Information Model Operations */
-/********************************/
+
+
+
 
 static void *
 returnFirstType(void *context, UA_ReferenceTarget *t) {
     UA_Server *server = (UA_Server*)context;
-    /* Don't release the node that is returned.
-     * Continues to iterate if NULL is returned. */
     return (void*)(uintptr_t)UA_NODESTORE_GETFROMREF(server, t->targetId);
 }
 
 const UA_Node *
 getNodeType(UA_Server *server, const UA_NodeHead *head) {
-    /* The reference to the parent is different for variable and variabletype */
+    
     UA_Byte parentRefIndex;
     UA_Boolean inverse;
     switch(head->nodeClass) {
@@ -54,7 +41,7 @@ getNodeType(UA_Server *server, const UA_NodeHead *head) {
         return NULL;
     }
 
-    /* Return the first matching candidate */
+    
     for(size_t i = 0; i < head->referencesSize; ++i) {
         UA_NodeReferenceKind *rk = &head->references[i];
         if(rk->isInverse != inverse)
@@ -172,8 +159,6 @@ getAllInterfaceChildNodeIds(UA_Server *server, const UA_NodeId *objectNode,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* The interface could also have been added manually before calling UA_Server_addNode_finish
-     * This can be handled by adding the object node as a start node for the HasInterface lookup */
     UA_ExpandedNodeId *resizedHasInterfaceCandidates = (UA_ExpandedNodeId*)
         UA_realloc(hasInterfaceCandidates,
                    (hasInterfaceCandidatesSize + 1) * sizeof(UA_ExpandedNodeId));
@@ -266,7 +251,7 @@ getAllInterfaceChildNodeIds(UA_Server *server, const UA_NodeId *objectNode,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Get the node, make the changes and release */
+
 UA_StatusCode
 UA_Server_editNode(UA_Server *server, UA_Session *session, const UA_NodeId *nodeId,
                    UA_UInt32 attributeMask, UA_ReferenceTypeSet references,
@@ -293,7 +278,7 @@ UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
     if(ops == 0)
         return UA_STATUSCODE_BADNOTHINGTODO;
 
-    /* No padding after size_t */
+    
     void **respPos = (void**)((uintptr_t)responseOperations + sizeof(size_t));
     *respPos = UA_Array_new(ops, responseOperationsType);
     if(!(*respPos))
@@ -301,7 +286,7 @@ UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
 
     *responseOperations = ops;
     uintptr_t respOp = (uintptr_t)*respPos;
-    /* No padding after size_t */
+    
     uintptr_t reqOp = *(uintptr_t*)((uintptr_t)requestOperations + sizeof(size_t));
     for(size_t i = 0; i < ops; i++) {
         operationCallback(server, session, context, (void*)reqOp, (void*)respOp);
@@ -311,95 +296,95 @@ UA_Server_processServiceOperations(UA_Server *server, UA_Session *session,
     return UA_STATUSCODE_GOOD;
 }
 
-/* A few global NodeId definitions */
+
 const UA_NodeId subtypeId = {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HASSUBTYPE}};
 const UA_NodeId hierarchicalReferences = {0, UA_NODEIDTYPE_NUMERIC, {UA_NS0ID_HIERARCHICALREFERENCES}};
 
-/*********************************/
-/* Default attribute definitions */
-/*********************************/
+
+
+
 
 const UA_ObjectAttributes UA_ObjectAttributes_default = {
-    0,                      /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}}, /* displayName */
-    {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    0                       /* eventNotifier */
+    0,                      
+    {{0, NULL}, {0, NULL}}, 
+    {{0, NULL}, {0, NULL}}, 
+    0, 0,                   
+    0                       
 };
 
 const UA_VariableAttributes UA_VariableAttributes_default = {
-    0,                           /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}},      /* displayName */
-    {{0, NULL}, {0, NULL}},      /* description */
-    0, 0,                        /* writeMask (userWriteMask) */
+    0,                           
+    {{0, NULL}, {0, NULL}},      
+    {{0, NULL}, {0, NULL}},      
+    0, 0,                        
     {NULL, UA_VARIANT_DATA,
-     0, NULL, 0, NULL},          /* value */
+     0, NULL, 0, NULL},          
     {0, UA_NODEIDTYPE_NUMERIC,
-     {UA_NS0ID_BASEDATATYPE}},   /* dataType */
-    UA_VALUERANK_ANY,            /* valueRank */
-    0, NULL,                     /* arrayDimensions */
-    UA_ACCESSLEVELMASK_READ |    /* accessLevel */
+     {UA_NS0ID_BASEDATATYPE}},   
+    UA_VALUERANK_ANY,            
+    0, NULL,                     
+    UA_ACCESSLEVELMASK_READ |    
     UA_ACCESSLEVELMASK_STATUSWRITE |
     UA_ACCESSLEVELMASK_TIMESTAMPWRITE,
-    0,                           /* userAccessLevel */
-    0.0,                         /* minimumSamplingInterval */
-    false                        /* historizing */
+    0,                           
+    0.0,                         
+    false                        
 };
 
 const UA_MethodAttributes UA_MethodAttributes_default = {
-    0,                      /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}}, /* displayName */
-    {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    true, true              /* executable (userExecutable) */
+    0,                      
+    {{0, NULL}, {0, NULL}}, 
+    {{0, NULL}, {0, NULL}}, 
+    0, 0,                   
+    true, true              
 };
 
 const UA_ObjectTypeAttributes UA_ObjectTypeAttributes_default = {
-    0,                      /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}}, /* displayName */
-    {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false                   /* isAbstract */
+    0,                      
+    {{0, NULL}, {0, NULL}}, 
+    {{0, NULL}, {0, NULL}}, 
+    0, 0,                   
+    false                   
 };
 
 const UA_VariableTypeAttributes UA_VariableTypeAttributes_default = {
-    0,                           /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}},      /* displayName */
-    {{0, NULL}, {0, NULL}},      /* description */
-    0, 0,                        /* writeMask (userWriteMask) */
+    0,                           
+    {{0, NULL}, {0, NULL}},      
+    {{0, NULL}, {0, NULL}},      
+    0, 0,                        
     {NULL, UA_VARIANT_DATA,
-     0, NULL, 0, NULL},          /* value */
+     0, NULL, 0, NULL},          
     {0, UA_NODEIDTYPE_NUMERIC,
-     {UA_NS0ID_BASEDATATYPE}},   /* dataType */
-    UA_VALUERANK_ANY,            /* valueRank */
-    0, NULL,                     /* arrayDimensions */
-    false                        /* isAbstract */
+     {UA_NS0ID_BASEDATATYPE}},   
+    UA_VALUERANK_ANY,            
+    0, NULL,                     
+    false                        
 };
 
 const UA_ReferenceTypeAttributes UA_ReferenceTypeAttributes_default = {
-    0,                      /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}}, /* displayName */
-    {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false,                  /* isAbstract */
-    false,                  /* symmetric */
-    {{0, NULL}, {0, NULL}}  /* inverseName */
+    0,                      
+    {{0, NULL}, {0, NULL}}, 
+    {{0, NULL}, {0, NULL}}, 
+    0, 0,                   
+    false,                  
+    false,                  
+    {{0, NULL}, {0, NULL}}  
 };
 
 const UA_DataTypeAttributes UA_DataTypeAttributes_default = {
-    0,                      /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}}, /* displayName */
-    {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false                   /* isAbstract */
+    0,                      
+    {{0, NULL}, {0, NULL}}, 
+    {{0, NULL}, {0, NULL}}, 
+    0, 0,                   
+    false                   
 };
 
 const UA_ViewAttributes UA_ViewAttributes_default = {
-    0,                      /* specifiedAttributes */
-    {{0, NULL}, {0, NULL}}, /* displayName */
-    {{0, NULL}, {0, NULL}}, /* description */
-    0, 0,                   /* writeMask (userWriteMask) */
-    false,                  /* containsNoLoops */
-    0                       /* eventNotifier */
+    0,                      
+    {{0, NULL}, {0, NULL}}, 
+    {{0, NULL}, {0, NULL}}, 
+    0, 0,                   
+    false,                  
+    0                       
 };
 

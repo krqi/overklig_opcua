@@ -1,34 +1,12 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2016-2020 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2016 (c) Sten Grüner
- *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Florian Palm
- *    Copyright 2020 (c) HMS Industrial Networks AB (Author: Jonas Green)
- */
 
 #ifndef UA_COMMON_H_
 #define UA_COMMON_H_
 
-#include <open62541/config.h>
-#include <open62541/nodeids.h>
+#include <opcua/config.h>
+#include <opcua/nodeids.h>
 
 _UA_BEGIN_DECLS
 
-/**
- * Common Definitions
- * ==================
- *
- * Common definitions for Client, Server and PubSub.
- *
- * .. _attribute-id:
- *
- * Attribute Id
- * ------------
- * Every node in an OPC UA information model contains attributes depending on
- * the node type. Possible attributes are as follows: */
 
 typedef enum {
     UA_ATTRIBUTEID_INVALID                 = 0,
@@ -61,18 +39,9 @@ typedef enum {
     UA_ATTRIBUTEID_ACCESSLEVELEX           = 27
 } UA_AttributeId;
 
-/* Returns a readable attribute name like "NodeId" or "Invalid" if the attribute
- * does not exist */
 UA_EXPORT const char *
 UA_AttributeId_name(UA_AttributeId attrId);
 
-/**
- * .. _access-level-mask:
- *
- * Access Level Masks
- * ------------------
- * The access level to a node is given by the following constants that are ANDed
- * with the overall access level. */
 
 #define UA_ACCESSLEVELMASK_READ           (0x01u << 0u)
 #define UA_ACCESSLEVELMASK_CURRENTREAD    (0x01u << 0u)
@@ -84,13 +53,6 @@ UA_AttributeId_name(UA_AttributeId attrId);
 #define UA_ACCESSLEVELMASK_STATUSWRITE    (0x01u << 5u)
 #define UA_ACCESSLEVELMASK_TIMESTAMPWRITE (0x01u << 6u)
 
-/**
- * .. _write-mask:
- *
- * Write Masks
- * -----------
- * The write mask and user write mask is given by the following constants that
- * are ANDed for the overall write mask. Part 3: 5.2.7 Table 2 */
 
 #define UA_WRITEMASK_ACCESSLEVEL             (0x01u << 0u)
 #define UA_WRITEMASK_ARRRAYDIMENSIONS        (0x01u << 1u)
@@ -119,14 +81,6 @@ UA_AttributeId_name(UA_AttributeId attrId);
 #define UA_WRITEMASK_ACCESSRESTRICTIONS      (0x01u << 24u)
 #define UA_WRITEMASK_ACCESSLEVELEX           (0x01u << 25u)
 
-/**
- * .. _valuerank-defines:
- *
- * ValueRank
- * ---------
- * The following are the most common ValueRanks used for Variables,
- * VariableTypes and method arguments. ValueRanks higher than 3 are valid as
- * well (but less common). */
 
 #define UA_VALUERANK_SCALAR_OR_ONE_DIMENSION  -3
 #define UA_VALUERANK_ANY                      -2
@@ -136,44 +90,18 @@ UA_AttributeId_name(UA_AttributeId attrId);
 #define UA_VALUERANK_TWO_DIMENSIONS            2
 #define UA_VALUERANK_THREE_DIMENSIONS          3
 
-/**
- * .. _eventnotifier:
- *
- * EventNotifier
- * -------------
- * The following are the available EventNotifier used for Nodes.
- * The EventNotifier Attribute is used to indicate if the Node can be used
- * to subscribe to Events or to read / write historic Events.
- * Part 3: 5.4 Table 10 */
 
 #define UA_EVENTNOTIFIER_SUBSCRIBE_TO_EVENT (0x01u << 0u)
 #define UA_EVENTNOTIFIER_HISTORY_READ       (0x01u << 2u)
 #define UA_EVENTNOTIFIER_HISTORY_WRITE      (0x01u << 3u)
 
-/**
- * .. _rule-handling:
- *
- * Rule Handling
- * -------------
- *
- * The RuleHanding settings define how error cases that result from rules in the
- * OPC UA specification shall be handled. The rule handling can be softened,
- * e.g. to workaround misbehaving implementations or to mitigate the impact of
- * additional rules that are introduced in later versions of the OPC UA
- * specification. */
 typedef enum {
     UA_RULEHANDLING_DEFAULT = 0,
-    UA_RULEHANDLING_ABORT,  /* Abort the operation and return an error code */
-    UA_RULEHANDLING_WARN,   /* Print a message in the logs and continue */
-    UA_RULEHANDLING_ACCEPT, /* Continue and disregard the broken rule */
+    UA_RULEHANDLING_ABORT,  
+    UA_RULEHANDLING_WARN,   
+    UA_RULEHANDLING_ACCEPT, 
 } UA_RuleHandling;
 
-/**
- * Order
- * -----
- *
- * The Order enum is used to establish an absolute ordering between elements.
- */
 
 typedef enum {
     UA_ORDER_LESS = -1,
@@ -181,18 +109,9 @@ typedef enum {
     UA_ORDER_MORE = 1
 } UA_Order;
 
-/**
- * Connection State
- * ---------------- */
 
 typedef enum {
-    UA_CONNECTIONSTATE_CLOSED,     /* The socket has been closed and the connection
-                                    * will be deleted */
-    UA_CONNECTIONSTATE_OPENING,    /* The socket is open, but the connection not yet
-                                      fully established */
-    UA_CONNECTIONSTATE_ESTABLISHED,/* The socket is open and the connection
-                                    * configured */
-    UA_CONNECTIONSTATE_CLOSING     /* The socket is closing down */
+    UA_CONNECTIONSTATE_CLOSING     
 } UA_ConnectionState;
 
 
@@ -221,16 +140,6 @@ typedef enum {
     UA_SESSIONSTATE_CLOSING
 } UA_SessionState;
 
-/**
- * Statistic Counters
- * ------------------
- *
- * The stack manages statistic counters for SecureChannels and Sessions.
- *
- * The Session layer counters are matching the counters of the
- * ServerDiagnosticsSummaryDataType that are defined in the OPC UA Part 5
- * specification. The SecureChannel counters are not defined in the OPC UA spec,
- * but are harmonized with the Session layer counters if possible. */
 
 typedef enum {
     UA_SHUTDOWNREASON_CLOSE = 0,
@@ -245,27 +154,20 @@ typedef struct {
     size_t currentChannelCount;
     size_t cumulatedChannelCount;
     size_t rejectedChannelCount;
-    size_t channelTimeoutCount; /* only used by servers */
+    size_t channelTimeoutCount; 
     size_t channelAbortCount;
-    size_t channelPurgeCount;   /* only used by servers */
+    size_t channelPurgeCount;   
 } UA_SecureChannelStatistics;
 
 typedef struct {
     size_t currentSessionCount;
     size_t cumulatedSessionCount;
-    size_t securityRejectedSessionCount; /* only used by servers */
+    size_t securityRejectedSessionCount; 
     size_t rejectedSessionCount;
-    size_t sessionTimeoutCount;          /* only used by servers */
-    size_t sessionAbortCount;            /* only used by servers */
+    size_t sessionTimeoutCount;          
+    size_t sessionAbortCount;            
 } UA_SessionStatistics;
 
-/**
- * Lifecycle States
- * ----------------
- *
- * Generic lifecycle states. The STOPPING state indicates that the lifecycle is
- * being terminated. But it might take time to (asynchronously) perform a
- * graceful shutdown. */
 
 typedef enum {
     UA_LIFECYCLESTATE_STOPPED = 0,
@@ -273,10 +175,6 @@ typedef enum {
     UA_LIFECYCLESTATE_STOPPING
 } UA_LifecycleState;
 
-/**
- * Forward Declarations
- * --------------------
- * Opaque pointers used in Client, Server and PubSub. */
 
 struct UA_Server;
 typedef struct UA_Server UA_Server;
@@ -289,9 +187,7 @@ typedef void (*UA_ServerCallback)(UA_Server *server, void *data);
 struct UA_Client;
 typedef struct UA_Client UA_Client;
 
-/**
- * .. include:: util.rst */
 
 _UA_END_DECLS
 
-#endif /* UA_COMMON_H_ */
+#endif 

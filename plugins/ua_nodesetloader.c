@@ -1,15 +1,8 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2014-2019 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Julian Grothoff
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- */
 
-#include <open62541/plugin/nodesetloader.h>
-#include <NodesetLoader/backendOpen62541.h>
+#include <opcua/plugin/nodesetloader.h>
+#include <NodesetLoader/backendopcua.h>
 #include <NodesetLoader/dataTypes.h>
-#include <open62541/server.h>
+#include <opcua/server.h>
 
 UA_StatusCode
 UA_Server_loadNodeset(UA_Server *server, const char *nodeset2XmlFilePath,

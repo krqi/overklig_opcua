@@ -80,10 +80,10 @@ parser.add_argument('-v', '--verbose', action='count',
                     help='Make the script more verbose. Can be applied up to 4 times')
 
 parser.add_argument('--backend',
-                    default='open62541',
-                    const='open62541',
+                    default='opcua',
+                    const='opcua',
                     nargs='?',
-                    choices=['open62541', 'graphviz'],
+                    choices=['opcua', 'graphviz'],
                     help='Backend for the output files (default: %(default)s)')
 
 args = parser.parse_args()
@@ -163,7 +163,7 @@ for xmlfile in args.infiles:
         continue
     ns.addNodeSet(xmlfile, typesArray="UA_TYPES")
 
-# # We need to notify the open62541 server of the namespaces used to be able to use i.e. ns=3
+# # We need to notify the opcua server of the namespaces used to be able to use i.e. ns=3
 # namespaceArrayNames = preProc.getUsedNamespaceArrayNames()
 # for key in namespaceArrayNames:
 #   ns.addNamespace(key, namespaceArrayNames[key])
@@ -220,10 +220,10 @@ ns.setNodeParent()
 
 logger.info(f"Generating Code for Backend: {args.backend}")
 
-if args.backend == "open62541":
-    # Create the C code with the open62541 backend of the compiler
-    from backend_open62541 import generateOpen62541Code
-    generateOpen62541Code(ns, args.outputFile, args.internal_headers, args.typesArray)
+if args.backend == "opcua":
+    # Create the C code with the opcua backend of the compiler
+    from backend_opcua import generateopcuaCode
+    generateopcuaCode(ns, args.outputFile, args.internal_headers, args.typesArray)
 elif args.backend == "graphviz":
     from backend_graphviz import generateGraphvizCode
     generateGraphvizCode(ns, filename=args.outputFile)

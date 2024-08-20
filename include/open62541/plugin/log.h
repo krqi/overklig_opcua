@@ -1,34 +1,13 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- */
 
 #ifndef UA_PLUGIN_LOG_H_
 #define UA_PLUGIN_LOG_H_
 
-#include <open62541/config.h>
+#include <opcua/config.h>
 
 #include <stdarg.h>
 
 _UA_BEGIN_DECLS
 
-/**
- * .. _logging:
- *
- * Logging Plugin API
- * ==================
- *
- * Servers and clients define a logger in their configuration. The logger is a
- * plugin. A default plugin that logs to ``stdout`` is provided as an example.
- * The logger plugin is stateful and can point to custom data. So it is possible
- * to keep open file handlers in the logger context.
- *
- * Every log message consists of a log level, a log category and a string
- * message content. The timestamp of the log message is created within the
- * logger. */
 
 typedef enum {
     UA_LOGLEVEL_TRACE   = 100,
@@ -55,15 +34,12 @@ typedef enum {
 } UA_LogCategory;
 
 typedef struct UA_Logger {
-    /* Log a message. The message string and following varargs are formatted for
-     * the mp_snprintf command. Use the convenience macros below that take the
-     * minimum log level defined in ua_config.h into account. */
     void (*log)(void *logContext, UA_LogLevel level, UA_LogCategory category,
                 const char *msg, va_list args);
 
-    void *context; /* Logger state */
+    void *context; 
 
-    void (*clear)(struct UA_Logger *logger); /* Clean up the logger plugin */
+    void (*clear)(struct UA_Logger *logger); 
 } UA_Logger;
 
 static UA_INLINE void
@@ -158,4 +134,4 @@ UA_LOG_FATAL(const UA_Logger *logger, UA_LogCategory category, const char *msg, 
 
 _UA_END_DECLS
 
-#endif /* UA_PLUGIN_LOG_H_ */
+#endif 

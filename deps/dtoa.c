@@ -53,7 +53,7 @@ static uint64_t tens[] = {
 
 #define npowers     87
 #define steppowers  8
-#define firstpower -348 /* 10 ^ -348 */
+#define firstpower -348 
 #define expmax     -32
 #define expmin     -60
 
@@ -178,7 +178,7 @@ static Fp multiply(Fp* a, Fp* b) {
     uint64_t al_bl = (a->frac & lomask) * (b->frac & lomask);
     uint64_t ah_bh = (a->frac >> 32)    * (b->frac >> 32);
     uint64_t tmp = (ah_bl & lomask) + (al_bh & lomask) + (al_bl >> 32); 
-    /* round up */
+    
     tmp += 1U << 31;
     Fp fp;
     fp.frac = ah_bh + (ah_bl >> 32) + (al_bh >> 32) + (tmp >> 32);
@@ -210,7 +210,7 @@ static unsigned generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int*
     int kappa = 10;
     uint64_t* divp;
 
-    /* 1000000000 */
+    
     for(divp = tens + 10; kappa > 0; divp++) {
         uint64_t div = *divp;
         uint64_t digit = part1 / div;
@@ -229,7 +229,7 @@ static unsigned generate_digits(Fp* fp, Fp* upper, Fp* lower, char* digits, int*
         }
     }
 
-    /* 10 */
+    
     uint64_t* unit = tens + 18;
     while(true) {
         part2 *= 10;
@@ -272,19 +272,19 @@ static unsigned
 emit_digits(char* digits, unsigned ndigits, char* dest, int K, bool neg) {
     int exp = absv(K + (int)ndigits - 1);
 
-    /* write plain integer */
+    
     if(K >= 0 && (exp < (int)ndigits + 7)) {
         memcpy(dest, digits, ndigits);
         memset(dest + ndigits, '0', (unsigned)K);
-        memcpy(dest + ndigits + (unsigned)K, ".0", 2); /* always append .0 for naked integers */
+        memcpy(dest + ndigits + (unsigned)K, ".0", 2); 
         return (unsigned)(ndigits + (unsigned)K + 2);
     }
 
-    /* write decimal w/o scientific notation */
+    
     if(K < 0 && (K > -7 || exp < 4)) {
         int offset = (int)ndigits - absv(K);
         if(offset <= 0) {
-            /* fp < 1.0 -> write leading zero */
+            
             offset = -offset;
             dest[0] = '0';
             dest[1] = '.';
@@ -292,7 +292,7 @@ emit_digits(char* digits, unsigned ndigits, char* dest, int K, bool neg) {
             memcpy(dest + offset + 2, digits, ndigits);
             return ndigits + 2 + (unsigned)offset;
         } else {
-            /* fp > 1.0 */
+            
             memcpy(dest, digits, (size_t)offset);
             dest[offset] = '.';
             memcpy(dest + offset + 1, digits + offset, ndigits - (unsigned)offset);
@@ -300,7 +300,7 @@ emit_digits(char* digits, unsigned ndigits, char* dest, int K, bool neg) {
         }
     }
 
-    /* write decimal w/ scientific notation */
+    
     ndigits = minv(ndigits, (unsigned)(18 - neg));
     unsigned idx = 0;
     dest[idx++] = digits[0];

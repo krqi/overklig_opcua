@@ -5,7 +5,7 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 from nodeset_compiler.type_parser import CSVBSDTypeParser
-import nodeset_compiler.backend_open62541_typedefinitions as backend
+import nodeset_compiler.backend_opcua_typedefinitions as backend
 import argparse
 
 ###############################

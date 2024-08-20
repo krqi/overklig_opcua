@@ -1,21 +1,13 @@
-/* This Source Code Form is subjec&t to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2023-2024 (c) Fraunhofer IOSB (Author: Florian Düwel)
- */
 
 #ifndef UA_EVENTFILTER_PARSER_H_
 #define UA_EVENTFILTER_PARSER_H_
 
-#include "open62541/types.h"
-#include "open62541/plugin/log.h"
-#include "open62541_queue.h"
+#include "opcua/types.h"
+#include "opcua/plugin/log.h"
+#include "opcua_queue.h"
 
 _UA_BEGIN_DECLS
 
-/* The following token identifiers are generated from ua_eventfilter_grammar.y.
- * They need to be udpated here whenever the grammar is changed. */
 #define EF_TOK_OR                               1
 #define EF_TOK_AND                              2
 #define EF_TOK_NOT                              3
@@ -49,26 +41,23 @@ typedef struct {
     UA_FilterOperator filter;
     size_t childrenSize;
     Operand **children;
-    UA_Boolean required; /* Referenced in the operator hierarchy */
-    size_t elementIndex; /* If non-null, then the Operator has been printed out
-                          * already to the final EventFilter in the element
-                          * array. */
+    UA_Boolean required; 
 } Operator;
 
 typedef enum { OT_OPERATOR, OT_REF, OT_SAO, OT_LITERAL } OperandType;
 
 struct Operand {
-    char *ref; /* The operand has a name */
+    char *ref; 
     OperandType type;
     union {
         Operator op;
-        char *ref; /* Reference to another operand with a name */
+        char *ref; 
         UA_SimpleAttributeOperand sao;
         UA_Variant literal;
     } operand;
     LIST_ENTRY(Operand) entries;
     TAILQ_ENTRY(Operand) select_entries;
-    Operand *next; /* For the INLINST operator list */
+    Operand *next; 
 };
 
 typedef struct {
@@ -89,20 +78,18 @@ void append_operand(Operand *op, Operand *on);
 void append_select(EFParseContext *ctx, Operand *on);
 UA_StatusCode create_filter(EFParseContext *ctx, UA_EventFilter *filter);
 
-/* Skip whitespace and comments */
+
 UA_StatusCode
 UA_EventFilter_skip(const UA_ByteString content, size_t *offset, EFParseContext *ctx);
 
-/* The begin offset is set to the beginning of the token (after comments and
- * whitespace). If we we attempt to parse a token. */
 int UA_EventFilter_lex(const UA_ByteString content, size_t *offset,
                        EFParseContext *ctx, Operand **token);
 
-/* Translate from the offset to lines/columns of the input */
+
 void
 pos2lines(const UA_ByteString content, size_t pos,
           unsigned *outLine, unsigned *outCol);
 
 _UA_END_DECLS
 
-#endif /* UA_EVENTFILTER_PARSER_H_ */
+#endif 

@@ -1,13 +1,7 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
-#include <open62541/types.h>
-#include <open62541/types_generated.h>
-#include <open62541/pubsub.h>
+#include <opcua/types.h>
+#include <opcua/types_generated.h>
+#include <opcua/pubsub.h>
 
 #include <stdio.h>
 #if defined(_MSC_VER)
@@ -42,22 +36,22 @@ static const UA_DecodeJsonOptions decode_options = {0};
 
 static UA_StatusCode
 decode(const UA_ByteString *buf, UA_ByteString *out, const UA_DataType *type) {
-    /* Allocate memory for the type */
+    
     void *data = malloc(type->memSize);
     if(!data)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
-    /* Decode JSON */
+    
     UA_StatusCode retval = UA_decodeJson(buf, data, type, &decode_options);
     if(retval != UA_STATUSCODE_GOOD) {
         free(data);
         return retval;
     }
 
-    /* Encode Binary. Internally allocates the buffer upon success */
+    
     retval = UA_encodeBinary(data, type, out);
 
-    /* Clean up */
+    
     UA_delete(data, type);
     return retval;
 }
@@ -137,7 +131,7 @@ int main(int argc, char **argv) {
     FILE *out = stdout;
     int retcode = -1;
 
-    /* Read the command line options */
+    
     if(argc < 2) {
         usage();
         return 0;
@@ -187,7 +181,7 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    /* Find the data type */
+    
     const UA_DataType *type = NULL;
 #ifdef UA_ENABLE_PUBSUB
     if(strcmp(datatype_option, "PubSub") == 0) {
@@ -207,7 +201,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Open files */
+    
     if(input_option) {
         in = fopen(input_option, "rb");
         if(!in) {
@@ -223,7 +217,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* Read input until EOF */
+    
     size_t pos = 0;
     size_t length = 128;
     do {
@@ -252,7 +246,7 @@ int main(int argc, char **argv) {
     }
     buf.length = pos;
 
-    /* Convert */
+    
     UA_StatusCode result = UA_STATUSCODE_BADNOTIMPLEMENTED;
 #ifdef UA_ENABLE_PUBSUB
     if(pubsub && encode_option) {
@@ -273,7 +267,7 @@ int main(int argc, char **argv) {
         goto cleanup;
     }
 
-    /* Print the output and quit */
+    
     fwrite(outbuf.data, 1, outbuf.length, out);
     retcode = 0;
 

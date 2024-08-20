@@ -1,14 +1,7 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2019 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2023 (c) Fraunhofer IOSB (Author: Kai Huebl)
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-#include <open62541/plugin/securitypolicy.h>
-#include <open62541/plugin/certificategroup.h>
-#include <open62541/types.h>
+#include <opcua/plugin/securitypolicy.h>
+#include <opcua/plugin/certificategroup.h>
+#include <opcua/types.h>
 
 #if defined(UA_ENABLE_ENCRYPTION_MBEDTLS)
 
@@ -136,7 +129,7 @@ mbedtls_generateKey(mbedtls_md_context_t *context,
 UA_StatusCode
 mbedtls_verifySig_sha1(mbedtls_x509_crt *certificate, const UA_ByteString *message,
                        const UA_ByteString *signature) {
-    /* Compute the sha1 hash */
+    
     unsigned char hash[UA_SHA1_LENGTH];
 #if MBEDTLS_VERSION_NUMBER >= 0x02070000 && MBEDTLS_VERSION_NUMBER < 0x03000000
     mbedtls_sha1_ret(message->data, message->length, hash);
@@ -144,13 +137,13 @@ mbedtls_verifySig_sha1(mbedtls_x509_crt *certificate, const UA_ByteString *messa
     mbedtls_sha1(message->data, message->length, hash);
 #endif
 
-    /* Set the RSA settings */
+    
     mbedtls_rsa_context *rsaContext = mbedtls_pk_rsa(certificate->pk);
     if(!rsaContext)
         return UA_STATUSCODE_BADINTERNALERROR;
     mbedtls_rsa_set_padding(rsaContext, MBEDTLS_RSA_PKCS_V15, MBEDTLS_MD_NONE);
 
-    /* Verify */
+    
     int mbedErr = mbedtls_pk_verify(&certificate->pk,
                                     MBEDTLS_MD_SHA1, hash, UA_SHA1_LENGTH,
                                     signature->data, signature->length);
@@ -196,7 +189,7 @@ mbedtls_thumbprint_sha1(const UA_ByteString *certificate,
     if(thumbprint->length != UA_SHA1_LENGTH)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* The certificate thumbprint is always a 20 bit sha1 hash, see Part 4 of the Specification. */
+    
 #if MBEDTLS_VERSION_NUMBER >= 0x02070000 && MBEDTLS_VERSION_NUMBER < 0x03000000
     mbedtls_sha1_ret(certificate->data, certificate->length, thumbprint->data);
 #else
@@ -322,7 +315,7 @@ mbedtls_x509write_csrSetSubjectAltName(mbedtls_x509write_csr *ctx, const mbedtls
     unsigned char *pc;
     size_t len = 0;
 
-    /* How many alt names to be written */
+    
     size_t sandeep = mbedtls_getSequenceListDeep(sanlist);
     if(sandeep == 0)
         return UA_STATUSCODE_GOOD;
@@ -350,7 +343,7 @@ mbedtls_x509write_csrSetSubjectAltName(mbedtls_x509write_csr *ctx, const mbedtls
                 break;
             }
             default:
-                /* Error out on an unsupported SAN */
+                
                 ret = MBEDTLS_ERR_X509_FEATURE_UNAVAILABLE;
                 goto cleanup;
         }
@@ -403,7 +396,7 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
                              const UA_ByteString *nonce,
                              UA_ByteString *csr,
                              UA_ByteString *newPrivateKey) {
-    /* Check parameter */
+    
     if(!securityPolicy || !csr || !localPrivateKey || !csrLocalPrivateKey) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
@@ -415,24 +408,22 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
 
     mbedtls_pk_free(csrLocalPrivateKey);
 
-    /* CSR has already been generated and private key only needs to be set
-     * if a new one has been generated. */
     if(newPrivateKey && newPrivateKey->length > 0) {
         mbedtls_pk_init(csrLocalPrivateKey);
         mbedtls_pk_setup(csrLocalPrivateKey, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
 
-        /* Set the private key */
+        
         if(UA_mbedTLS_LoadPrivateKey(newPrivateKey, csrLocalPrivateKey, entropyContext))
             return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 
         return UA_STATUSCODE_GOOD;
     }
 
-    /* CSR is already created. Nothing to do */
+    
     if(csr && csr->length > 0)
         return UA_STATUSCODE_GOOD;
 
-    /* Get X509 certificate */
+    
     mbedtls_x509_crt x509Cert;
     mbedtls_x509_crt_init(&x509Cert);
     UA_ByteString certificateStr = UA_mbedTLS_CopyDataFormatAware(&securityPolicy->localCertificate);
@@ -443,10 +434,10 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
 
     mbedtls_x509write_csr request;
     mbedtls_x509write_csr_init(&request);
-    /* Set message digest algorithms in CSR context */
+    
     mbedtls_x509write_csr_set_md_alg(&request, MBEDTLS_MD_SHA256);
 
-    /* Set key usage in CSR context */
+    
     if(mbedtls_x509write_csr_set_key_usage(&request, MBEDTLS_X509_KU_DIGITAL_SIGNATURE |
                                                      MBEDTLS_X509_KU_DATA_ENCIPHERMENT |
                                                      MBEDTLS_X509_KU_NON_REPUDIATION |
@@ -455,7 +446,7 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
         goto cleanup;
     }
 
-    /* Add entropy */
+    
     UA_Boolean hasEntropy = entropyContext && nonce && nonce->length > 0;
     if(hasEntropy) {
         if(mbedtls_entropy_update_manual(entropyContext,
@@ -466,9 +457,9 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
         }
     }
 
-    /* Get subject from argument or read it from certificate */
+    
     if(subjectName && subjectName->length > 0) {
-        /* subject from argument */
+        
         subj = (char *)UA_malloc(subjectName->length + 1);
         if(!subj) {
             retval = UA_STATUSCODE_BADOUTOFMEMORY;
@@ -476,7 +467,7 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
         }
         memset(subj, 0x00, subjectName->length + 1);
         strncpy(subj, (char *)subjectName->data, subjectName->length);
-        /* search for / in subject and replace it by comma */
+        
         char *p = subj;
         for(size_t i = 0; i < subjectName->length; i++) {
             if(*p == '/' ) {
@@ -485,7 +476,7 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
             ++p;
         }
     } else {
-        /* read subject from certificate */
+        
         mbedtls_x509_name s = x509Cert.subject;
         subj = (char *)UA_malloc(UA_MAXSUBJECTLENGTH);
         if(!subj) {
@@ -498,17 +489,17 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
         }
     }
 
-    /* Set the subject in CSR context */
+    
     if(mbedtls_x509write_csr_set_subject_name(&request, subj) != 0) {
         retval = UA_STATUSCODE_BADINTERNALERROR;
         goto cleanup;
     }
 
-    /* Get the subject alternate names from certificate and set them in CSR context*/
+    
     san_list = &x509Cert.subject_alt_names;
     mbedtls_x509write_csrSetSubjectAltName(&request, san_list);
 
-    /* Set private key in CSR context */
+    
     if(newPrivateKey) {
         mbedtls_pk_init(csrLocalPrivateKey);
         mbedtls_pk_setup(csrLocalPrivateKey, mbedtls_pk_info_from_type(MBEDTLS_PK_RSA));
@@ -533,11 +524,11 @@ mbedtls_createSigningRequest(mbedtls_pk_context *localPrivateKey,
         goto cleanup;
     }
 
-    /* number of CSR data bytes located at the end of the request buffer */
+    
     size_t byteCount = ret;
     size_t offset = sizeof(requestBuf) - byteCount;
 
-    /* copy return parameter into a ByteString */
+    
     UA_ByteString_init(csr);
     UA_ByteString_allocBuffer(csr, byteCount);
     memcpy(csr->data, requestBuf + offset, byteCount);

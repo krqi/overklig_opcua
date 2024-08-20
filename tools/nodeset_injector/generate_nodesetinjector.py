@@ -25,14 +25,12 @@ def printc(string):
 #########################
 
 printh('''
-/* WARNING: This is a generated file.
- * Any manual changes will be overwritten. */
  
 #ifndef NODESETINJECTOR_H_
 #define NODESETINJECTOR_H_
 
-#include <open62541/server.h>
-#include <open62541/plugin/log_stdout.h>
+#include <opcua/server.h>
+#include <opcua/plugin/log_stdout.h>
 
 _UA_BEGIN_DECLS
 
@@ -40,7 +38,7 @@ extern UA_StatusCode UA_Server_injectNodesets(UA_Server *server);
 
 _UA_END_DECLS
 
-#endif /* NODESETINJECTOR_H_ */
+#endif 
 ''')
 
 #########################
@@ -48,8 +46,6 @@ _UA_END_DECLS
 #########################
 
 printc('''
-/* WARNING: This is a generated file.
- * Any manual changes will be overwritten. */
 
 #include "nodesetinjector.h"
 //<

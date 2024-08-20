@@ -1,35 +1,12 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2014-2024 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2014-2016 (c) Sten Grüner
- *    Copyright 2014-2015, 2017 (c) Florian Palm
- *    Copyright 2015-2016 (c) Chris Iatrou
- *    Copyright 2015-2016 (c) Oleksiy Vasylyev
- *    Copyright 2016 (c) Joakim L. Gilje
- *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2016 (c) TorbenD
- *    Copyright 2017 (c) frax2222
- *    Copyright 2017 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2019 (c) Kalycito Infotech Private Limited
- *    Copyright 2023 (c) Hilscher Gesellschaft für Systemautomation mbH (Author: Phuong Nguyen)
- */
 
-/* This file contains the service invocation logic that is called from all
- * communication backends */
 
 #include "ua_server_internal.h"
 #include "ua_services.h"
 
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-/* store the authentication token and session ID so we can help fuzzing by
- * setting these values in the next request automatically */
 UA_NodeId unsafe_fuzz_authenticationToken = {0, UA_NODEIDTYPE_NUMERIC, {0}};
 #endif
 
-/* The counterOffset is the offset of the UA_ServiceCounterDataType for the
- * service in the UA_ SessionDiagnosticsDataType. */
 #ifdef UA_ENABLE_DIAGNOSTICS
 # define UA_SERVICECOUNTER_OFFSET_NONE(requiresSession) 0, requiresSession
 # define UA_SERVICECOUNTER_OFFSET(X, requiresSession) \
@@ -178,7 +155,7 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
                        const UA_Request *request, UA_Response *response) {
     UA_ResponseHeader *rh = &response->responseHeader;
 
-    /* Check timestamp in the request header */
+    
     if(request->requestHeader.timestamp == 0 &&
        server->config.verifyRequestTimestamp <= UA_RULEHANDLING_WARN) {
         UA_LOG_WARNING_CHANNEL(server->config.logging, channel,
@@ -190,7 +167,7 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
         }
     }
 
-    /* If it is an unencrypted (#None) channel, only allow the discovery services */
+    
     if(server->config.securityPolicyNoneDiscoveryOnly &&
        UA_String_equal(&channel->securityPolicy->policyUri, &securityPolicyNone ) &&
        sd->requestType != &UA_TYPES[UA_TYPES_GETENDPOINTSREQUEST] &&
@@ -203,13 +180,11 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
         return false;
     }
 
-    /* Session lifecycle services */
+    
     if(sd->requestType == &UA_TYPES[UA_TYPES_CREATESESSIONREQUEST] ||
        sd->requestType == &UA_TYPES[UA_TYPES_ACTIVATESESSIONREQUEST] ||
        sd->requestType == &UA_TYPES[UA_TYPES_CLOSESESSIONREQUEST]) {
         ((UA_ChannelService)sd->serviceCallback)(server, channel, request, response);
-        /* Store the authentication token created during CreateSession to help
-         * fuzzing cover more lines */
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
         if(sd->requestType == &UA_TYPES[UA_TYPES_CREATESESSIONREQUEST]) {
             UA_CreateSessionResponse *res = &response->createSessionResponse;
@@ -220,7 +195,7 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
         return false;
     }
 
-    /* Set an anonymous, inactive session for services that need no session */
+    
     UA_Session anonymousSession;
     if(!session) {
         UA_assert(!sd->sessionRequired);
@@ -230,9 +205,9 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
         session = &anonymousSession;
     }
 
-    /* Trying to use a non-activated session? */
+    
     if(sd->sessionRequired && !session->activated) {
-        UA_assert(session != &anonymousSession); /* because sd->sessionRequired */
+        UA_assert(session != &anonymousSession); 
 #ifdef UA_ENABLE_TYPEDESCRIPTION
         UA_LOG_WARNING_SESSION(server->config.logging, session,
                                "%s refused on a non-activated session",
@@ -248,13 +223,13 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
         return false;
     }
 
-    /* Update the session lifetime */
+    
     UA_EventLoop *el = server->config.eventLoop;
     UA_DateTime nowMonotonic = el->dateTime_nowMonotonic(el);
     UA_DateTime now = el->dateTime_now(el);
     UA_Session_updateLifetime(session, now, nowMonotonic);
 
-    /* The publish request is not answered immediately */
+    
 #ifdef UA_ENABLE_SUBSCRIPTIONS
     if(sd->requestType == &UA_TYPES[UA_TYPES_PUBLISHREQUEST]) {
         rh->serviceResult = Service_Publish(server, session, &request->publishRequest, requestId);
@@ -262,7 +237,7 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
     }
 #endif
 
-    /* An async call request might not be answered immediately */
+    
 #if UA_MULTITHREADING >= 100 && defined(UA_ENABLE_METHODCALLS)
     if(sd->requestType == &UA_TYPES[UA_TYPES_CALLREQUEST]) {
         UA_Boolean finished = true;
@@ -272,7 +247,7 @@ processServiceInternal(UA_Server *server, UA_SecureChannel *channel, UA_Session 
     }
 #endif
 
-    /* Execute the synchronous service call */
+    
     sd->serviceCallback(server, session, request, response);
     return false;
 }
@@ -283,8 +258,6 @@ UA_Server_processRequest(UA_Server *server, UA_SecureChannel *channel,
                          const UA_Request *request, UA_Response *response) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Set the authenticationToken from the create session request to help
-     * fuzzing cover more lines */
 #ifdef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
     UA_NodeId *authenticationToken = &request->requestHeader.authenticationToken;
     if(!UA_NodeId_isNull(authenticationToken) &&
@@ -294,21 +267,21 @@ UA_Server_processRequest(UA_Server *server, UA_SecureChannel *channel,
     }
 #endif
 
-    /* Get the session bound to the SecureChannel (not necessarily activated) */
+    
     UA_Session *session = NULL;
     response->responseHeader.serviceResult =
         getBoundSession(server, channel, &request->requestHeader.authenticationToken, &session);
     if(!session && sd->sessionRequired)
         return false;
 
-    /* The session can be NULL if not required */
+    
     response->responseHeader.serviceResult = UA_STATUSCODE_GOOD;
 
-    /* Process the service */
+    
     UA_Boolean async =
         processServiceInternal(server, channel, session, requestId, sd, request, response);
 
-    /* Update the service statistics */
+    
 #ifdef UA_ENABLE_DIAGNOSTICS
     if(session) {
         session->diagnostics.totalRequestCount.totalCount++;

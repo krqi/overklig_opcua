@@ -1,19 +1,12 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2017 - 2018 Fraunhofer IOSB (Author: Tino Bischoff)
- * Copyright (c) 2017-2019 Fraunhofer IOSB (Author: Andreas Ebner)
- */
 
 #ifndef UA_PUBSUB_NETWORKMESSAGE_H_
 #define UA_PUBSUB_NETWORKMESSAGE_H_
 
-#include <open62541/types.h>
-#include <open62541/types_generated.h>
-#include <open62541/plugin/securitypolicy.h>
-#include <open62541/pubsub.h>
-#include <open62541/server_pubsub.h>
+#include <opcua/types.h>
+#include <opcua/types_generated.h>
+#include <opcua/plugin/securitypolicy.h>
+#include <opcua/pubsub.h>
+#include <opcua/server_pubsub.h>
 
 #include "../ua_types_encoding_binary.h"
 
@@ -21,29 +14,29 @@
 
 _UA_BEGIN_DECLS
 
-/**********************************************/
-/*          Network Message Offsets           */
-/**********************************************/
 
-/* Offsets for buffered messages in the PubSub fast path. */
+
+
+
+
 typedef enum {
     UA_PUBSUB_OFFSETTYPE_DATASETMESSAGE_SEQUENCENUMBER,
     UA_PUBSUB_OFFSETTYPE_NETWORKMESSAGE_SEQUENCENUMBER,
     UA_PUBSUB_OFFSETTYPE_NETWORKMESSAGE_FIELDENCDODING,
     UA_PUBSUB_OFFSETTYPE_TIMESTAMP_PICOSECONDS,
-    UA_PUBSUB_OFFSETTYPE_TIMESTAMP,     /* source pointer */
-    UA_PUBSUB_OFFSETTYPE_TIMESTAMP_NOW, /* no source */
+    UA_PUBSUB_OFFSETTYPE_TIMESTAMP,     
+    UA_PUBSUB_OFFSETTYPE_TIMESTAMP_NOW, 
     UA_PUBSUB_OFFSETTYPE_PAYLOAD_DATAVALUE,
     UA_PUBSUB_OFFSETTYPE_PAYLOAD_DATAVALUE_EXTERNAL,
     UA_PUBSUB_OFFSETTYPE_PAYLOAD_VARIANT,
     UA_PUBSUB_OFFSETTYPE_PAYLOAD_VARIANT_EXTERNAL,
     UA_PUBSUB_OFFSETTYPE_PAYLOAD_RAW,
     UA_PUBSUB_OFFSETTYPE_PAYLOAD_RAW_EXTERNAL,
-    /* For subscriber RT */
+    
     UA_PUBSUB_OFFSETTYPE_PUBLISHERID,
     UA_PUBSUB_OFFSETTYPE_WRITERGROUPID,
     UA_PUBSUB_OFFSETTYPE_DATASETWRITERID
-    /* Add more offset types as needed */
+    
 } UA_NetworkMessageOffsetType;
 
 typedef struct {
@@ -57,15 +50,12 @@ typedef struct {
 } UA_NetworkMessageOffset;
 
 typedef struct {
-    UA_ByteString buffer; /* The precomputed message buffer */
-    UA_NetworkMessageOffset *offsets; /* Offsets for changes in the message buffer */
+    UA_ByteString buffer; 
+    UA_NetworkMessageOffset *offsets; 
     size_t offsetsSize;
-    UA_NetworkMessage *nm; /* The precomputed NetworkMessage for subscriber */
+    UA_NetworkMessage *nm; 
     size_t rawMessageLength;
-    UA_ByteString encryptBuffer; /* The precomputed message buffer is copied
-                                  * into the encrypt buffer for encryption and
-                                  * signing*/
-    UA_Byte *payloadPosition; /* Payload Position of the message to encrypt*/
+    UA_Byte *payloadPosition; 
 } UA_NetworkMessageOffsetBuffer;
 
 void
@@ -81,9 +71,6 @@ size_t
 UA_NetworkMessage_calcSizeBinaryWithOffsetBuffer(
     const UA_NetworkMessage *p, UA_NetworkMessageOffsetBuffer *offsetBuffer);
 
-/**
- * DataSetMessage
- * ^^^^^^^^^^^^^^ */
 
 UA_StatusCode
 UA_DataSetMessageHeader_encodeBinary(const UA_DataSetMessageHeader *src,
@@ -106,9 +93,6 @@ UA_DataSetMessage_calcSizeBinary(UA_DataSetMessage *p,
 
 void UA_DataSetMessage_clear(UA_DataSetMessage *p);
 
-/**
- * NetworkMessage Encoding
- * ^^^^^^^^^^^^^^^^^^^^^^^ */
 
 UA_StatusCode
 UA_NetworkMessage_encodeHeaders(const UA_NetworkMessage *src,
@@ -122,9 +106,6 @@ UA_StatusCode
 UA_NetworkMessage_encodeFooters(const UA_NetworkMessage *src,
                                UA_Byte **bufPos, const UA_Byte *bufEnd);
 
-/**
- * NetworkMessage Decoding
- * ^^^^^^^^^^^^^^^^^^^^^^^ */
 
 UA_StatusCode
 UA_NetworkMessage_decodeHeaders(Ctx *ctx, UA_NetworkMessage *dst);
@@ -161,6 +142,6 @@ UA_NetworkMessage_signEncrypt(UA_NetworkMessage *nm, UA_MessageSecurityMode secu
 
 _UA_END_DECLS
 
-#endif /* UA_ENABLE_PUBSUB */
+#endif 
 
-#endif /* UA_PUBSUB_NETWORKMESSAGE_H_ */
+#endif 

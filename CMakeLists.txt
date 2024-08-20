@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
 
 if(UA_BUILD_FUZZING OR UA_BUILD_OSS_FUZZ OR UA_BUILD_FUZZING_CORPUS)
-    project(open62541) # We need to have C++ support configured for fuzzing
+    project(opcua) # We need to have C++ support configured for fuzzing
 else()
-    project(open62541 C) # Do not look for a C++ compiler
+    project(opcua C) # Do not look for a C++ compiler
 endif()
 
 # set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -17,7 +17,7 @@ find_package(Git)
 
 include(AssignSourceGroup)
 include(GNUInstallDirs)
-include(open62541Macros)
+include(opcuaMacros)
 
 #############################
 # Compiled binaries folders #
@@ -34,15 +34,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # The current version information. On the master branch, we take the version
 # number from the latest release plus the "-undefined" label. Will be
 # overwritten with more detailed information if git is available.
-set(OPEN62541_VER_MAJOR 1)
-set(OPEN62541_VER_MINOR 4)
-set(OPEN62541_VER_PATCH 4)
-set(OPEN62541_VER_LABEL "-undefined") # like "-rc1" or "-g4538abcd" or "-g4538abcd-dirty"
-set(OPEN62541_VER_COMMIT "unknown-commit")
+set(opcua_VER_MAJOR 1)
+set(opcua_VER_MINOR 4)
+set(opcua_VER_PATCH 4)
+set(opcua_VER_LABEL "-undefined") # like "-rc1" or "-g4538abcd" or "-g4538abcd-dirty"
+set(opcua_VER_COMMIT "unknown-commit")
 
 # Overwrite the version information based on git if available
 include(SetGitBasedVersion)
-set_open62541_version()
+set_opcua_version()
 
 # Examples for the version string are:
 # v1.2
@@ -51,15 +51,15 @@ set_open62541_version()
 # v1.2.3-rc1-dirty
 # v1.2.3-5-g4538abcd
 # v1.2.3-5-g4538abcd-dirty
-set(OPEN62541_VERSION "v${OPEN62541_VER_MAJOR}.${OPEN62541_VER_MINOR}.${OPEN62541_VER_PATCH}${OPEN62541_VER_LABEL}")
-MESSAGE(STATUS "open62541 Version: ${OPEN62541_VERSION}")
+set(opcua_VERSION "v${opcua_VER_MAJOR}.${opcua_VER_MINOR}.${opcua_VER_PATCH}${opcua_VER_LABEL}")
+MESSAGE(STATUS "opcua Version: ${opcua_VERSION}")
 
 ################
 # Architecture #
 ################
 
 set(UA_ARCHITECTURES "none" "posix" "win32")
-set(UA_ARCHITECTURE "" CACHE STRING "Architecture to build open62541 for")
+set(UA_ARCHITECTURE "" CACHE STRING "Architecture to build opcua for")
 SET_PROPERTY(CACHE UA_ARCHITECTURE PROPERTY STRINGS "" ${UA_ARCHITECTURES})
 
 if("${UA_ARCHITECTURE}" STREQUAL "")
@@ -87,7 +87,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build" FORCE)
 endif()
 
-option(UA_ENABLE_AMALGAMATION "Concatenate the library to a single file open62541.h/.c" OFF)
+option(UA_ENABLE_AMALGAMATION "Concatenate the library to a single file opcua.h/.c" OFF)
 option(BUILD_SHARED_LIBS "Enable building of shared libraries (dll/so)" OFF)
 set(UA_LOGLEVEL 100 CACHE STRING "Minimal level for logs (in addition to the log plugin settings) (100=TRACE, 200=DEBUG, 300=INFO, 400=WARNING, 500=ERROR, 600=FATAL)")
 option(UA_ENABLE_DIAGNOSTICS "Enable diagnostics information exposed by the server" ON)
@@ -211,7 +211,7 @@ endif()
 
 if(MSVC AND UA_NAMESPACE_ZERO STREQUAL "FULL")
     # For the full NS0 we need a stack size of 8MB (as it is default on linux)
-    # See https://github.com/open62541/open62541/issues/1326
+    # See https://github.com/opcua/opcua/issues/1326
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /STACK:8000000")
 endif()
 
@@ -434,35 +434,35 @@ endif()
 # External Libraries #
 ######################
 
-set(open62541_LIBRARIES "")
-set(open62541_PUBLIC_LIBRARIES "")
+set(opcua_LIBRARIES "")
+set(opcua_PUBLIC_LIBRARIES "")
 if("${UA_ARCHITECTURE}" STREQUAL "posix")
-    list(APPEND open62541_LIBRARIES "m")
+    list(APPEND opcua_LIBRARIES "m")
     if(UA_MULTITHREADING GREATER_EQUAL 100 OR UA_BUILD_UNIT_TESTS)
-        list(APPEND open62541_PUBLIC_LIBRARIES "pthread")
+        list(APPEND opcua_PUBLIC_LIBRARIES "pthread")
     endif()
     if(NOT APPLE AND (NOT ${CMAKE_SYSTEM_NAME} MATCHES "OpenBSD"))
-        list(APPEND open62541_LIBRARIES "rt")
+        list(APPEND opcua_LIBRARIES "rt")
     endif()
 elseif("${UA_ARCHITECTURE}" STREQUAL "win32")
-    list(APPEND open62541_LIBRARIES "ws2_32")
-    list(APPEND open62541_LIBRARIES "iphlpapi")
+    list(APPEND opcua_LIBRARIES "ws2_32")
+    list(APPEND opcua_LIBRARIES "iphlpapi")
 endif()
 
 if(UA_ENABLE_ENCRYPTION_OPENSSL)
     # use the OpenSSL encryption library
     # https://cmake.org/cmake/help/v3.13/module/FindOpenSSL.html
     find_package(OpenSSL REQUIRED)
-    list(APPEND open62541_LIBRARIES "${OPENSSL_LIBRARIES}")
+    list(APPEND opcua_LIBRARIES "${OPENSSL_LIBRARIES}")
 endif()
 
 if(UA_ENABLE_ENCRYPTION_LIBRESSL)
     # See https://github.com/libressl-portable/portable/blob/master/FindLibreSSL.cmake
     find_package(LibreSSL REQUIRED)
-    list(APPEND open62541_LIBRARIES ${LIBRESSL_LIBRARIES})
+    list(APPEND opcua_LIBRARIES ${LIBRESSL_LIBRARIES})
     if(WIN32)
         # Add bestcrypt for random generator and ws2_32 for crypto
-        list(APPEND open62541_LIBRARIES ws2_32 bcrypt)
+        list(APPEND opcua_LIBRARIES ws2_32 bcrypt)
     endif()
 endif()
 
@@ -471,11 +471,11 @@ if(UA_ENABLE_ENCRYPTION_MBEDTLS)
     # that is not possible, manually compile mbedTLS and set the cmake variables
     # defined in /tools/cmake/FindMbedTLS.cmake.
     find_package(MbedTLS REQUIRED)
-    list(APPEND open62541_LIBRARIES ${MBEDTLS_LIBRARIES})
+    list(APPEND opcua_LIBRARIES ${MBEDTLS_LIBRARIES})
 endif()
 
 if(UA_ENABLE_TPM2_SECURITY)
-    list(APPEND open62541_LIBRARIES ${TPM2_LIB})
+    list(APPEND opcua_LIBRARIES ${TPM2_LIB})
 endif()
 
 #####################
@@ -678,7 +678,7 @@ endif()
 file(MAKE_DIRECTORY "${PROJECT_BINARY_DIR}/src_generated")
 
 # Generate the config.h
-configure_file(include/open62541/config.h.in ${PROJECT_BINARY_DIR}/src_generated/open62541/config.h)
+configure_file(include/opcua/config.h.in ${PROJECT_BINARY_DIR}/src_generated/opcua/config.h)
 
 if(UA_ENABLE_DISCOVERY_MULTICAST)
   include(GenerateExportHeader)
@@ -701,31 +701,31 @@ if(UA_ENABLE_DISCOVERY_MULTICAST)
 endif()
 
 # Exported headers
-set(exported_headers ${PROJECT_BINARY_DIR}/src_generated/open62541/config.h
-                     ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes.h
-                     ${PROJECT_BINARY_DIR}/src_generated/open62541/nodeids.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/common.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/types.h
-                     ${PROJECT_BINARY_DIR}/src_generated/open62541/types_generated.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/log.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/util.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/accesscontrol.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/certificategroup.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/securitypolicy.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/eventloop.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/nodestore.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/plugin/historydatabase.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/server_pubsub.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/pubsub.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/client.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/server.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/client_highlevel.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/client_subscriptions.h
-                     ${PROJECT_SOURCE_DIR}/include/open62541/client_highlevel_async.h)
+set(exported_headers ${PROJECT_BINARY_DIR}/src_generated/opcua/config.h
+                     ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes.h
+                     ${PROJECT_BINARY_DIR}/src_generated/opcua/nodeids.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/common.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/types.h
+                     ${PROJECT_BINARY_DIR}/src_generated/opcua/types_generated.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/log.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/util.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/accesscontrol.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/certificategroup.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/securitypolicy.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/eventloop.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/nodestore.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/plugin/historydatabase.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/server_pubsub.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/pubsub.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/client.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/server.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/client_highlevel.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/client_subscriptions.h
+                     ${PROJECT_SOURCE_DIR}/include/opcua/client_highlevel_async.h)
 
 # Main Library
 
-set(lib_headers ${PROJECT_SOURCE_DIR}/deps/open62541_queue.h
+set(lib_headers ${PROJECT_SOURCE_DIR}/deps/opcua_queue.h
                 ${PROJECT_SOURCE_DIR}/deps/pcg_basic.h
                 ${PROJECT_SOURCE_DIR}/deps/libc_time.h
                 ${PROJECT_SOURCE_DIR}/deps/base64.h
@@ -735,7 +735,7 @@ set(lib_headers ${PROJECT_SOURCE_DIR}/deps/open62541_queue.h
                 ${PROJECT_SOURCE_DIR}/deps/ziptree.h
                 ${PROJECT_SOURCE_DIR}/src/ua_types_encoding_binary.h
                 ${PROJECT_SOURCE_DIR}/src/util/ua_util_internal.h
-                ${PROJECT_BINARY_DIR}/src_generated/open62541/transport_generated.h
+                ${PROJECT_BINARY_DIR}/src_generated/opcua/transport_generated.h
                 ${PROJECT_SOURCE_DIR}/src/ua_securechannel.h
                 ${PROJECT_SOURCE_DIR}/src/server/ua_session.h
                 ${PROJECT_SOURCE_DIR}/src/server/ua_subscription.h
@@ -750,9 +750,9 @@ set(lib_headers ${PROJECT_SOURCE_DIR}/deps/open62541_queue.h
 
 set(lib_sources ${PROJECT_SOURCE_DIR}/src/ua_types.c
                 ${PROJECT_SOURCE_DIR}/src/ua_types_encoding_binary.c
-                ${PROJECT_BINARY_DIR}/src_generated/open62541/types_generated.c
-                ${PROJECT_BINARY_DIR}/src_generated/open62541/transport_generated.c
-                ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes.c
+                ${PROJECT_BINARY_DIR}/src_generated/opcua/types_generated.c
+                ${PROJECT_BINARY_DIR}/src_generated/opcua/transport_generated.c
+                ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes.c
                 ${PROJECT_SOURCE_DIR}/src/util/ua_util.c
                 ${PROJECT_SOURCE_DIR}/src/ua_securechannel.c
                 ${PROJECT_SOURCE_DIR}/src/ua_securechannel_crypto.c
@@ -806,8 +806,8 @@ set(lib_sources ${PROJECT_SOURCE_DIR}/src/ua_types.c
                 ${PROJECT_SOURCE_DIR}/deps/ziptree.c)
 
 if(UA_GENERATED_NAMESPACE_ZERO)
-    list(APPEND lib_headers ${PROJECT_BINARY_DIR}/src_generated/open62541/namespace0_generated.h)
-    list(APPEND lib_sources ${PROJECT_BINARY_DIR}/src_generated/open62541/namespace0_generated.c)
+    list(APPEND lib_headers ${PROJECT_BINARY_DIR}/src_generated/opcua/namespace0_generated.h)
+    list(APPEND lib_sources ${PROJECT_BINARY_DIR}/src_generated/opcua/namespace0_generated.c)
 endif()
 
 if(UA_ENABLE_PARSING)
@@ -881,14 +881,14 @@ endif()
 
 
 # Plugins
-set(plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/accesscontrol_default.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/certificategroup_default.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/log_stdout.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/nodestore_default.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/server_config_default.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/client_config_default.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/securitypolicy_default.h
-                   ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/create_certificate.h)
+set(plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/accesscontrol_default.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/certificategroup_default.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/log_stdout.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/nodestore_default.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/server_config_default.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/client_config_default.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/securitypolicy_default.h
+                   ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/create_certificate.h)
 
 set(plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_log_stdout.c
                    ${PROJECT_SOURCE_DIR}/plugins/ua_accesscontrol_default.c
@@ -915,17 +915,17 @@ list(APPEND plugin_sources
 
 # For file based server configuration
 if(UA_ENABLE_JSON_ENCODING)
-    list(APPEND plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/open62541/server_config_file_based.h)
+    list(APPEND plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/opcua/server_config_file_based.h)
     list(APPEND plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_config_json.c)
 endif()
 
 if(UA_ENABLE_HISTORIZING)
     list(APPEND plugin_headers
-         ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/historydata/history_data_backend.h
-         ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/historydata/history_data_gathering.h
-         ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/historydata/history_database_default.h
-         ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/historydata/history_data_gathering_default.h
-         ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/historydata/history_data_backend_memory.h)
+         ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/historydata/history_data_backend.h
+         ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/historydata/history_data_gathering.h
+         ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/historydata/history_database_default.h
+         ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/historydata/history_data_gathering_default.h
+         ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/historydata/history_data_backend_memory.h)
     list(APPEND plugin_sources
          ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_history_data_backend_memory.c
          ${PROJECT_SOURCE_DIR}/plugins/historydata/ua_history_data_gathering_default.c
@@ -934,7 +934,7 @@ endif()
 
 # Syslog-logging on Linux and Unices
 if(UNIX)
-    list(APPEND plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/log_syslog.h)
+    list(APPEND plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/log_syslog.h)
     list(APPEND plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_log_syslog.c)
 endif()
 
@@ -988,15 +988,15 @@ endif()
 if(UA_ENABLE_NODESETLOADER)
     # This is required because of issues with policy CMP0077.
     # Source: https://stackoverflow.com/a/54404924
-    option(ENABLE_BUILD_INTO_OPEN62541 "make nodesetLoader part of the open62541 library" off)
-    set(ENABLE_BUILD_INTO_OPEN62541 on)
+    option(ENABLE_BUILD_INTO_opcua "make nodesetLoader part of the opcua library" off)
+    set(ENABLE_BUILD_INTO_opcua on)
 
     add_subdirectory(${PROJECT_SOURCE_DIR}/deps/nodesetLoader)
 
     list(APPEND lib_sources ${NODESETLOADER_SOURCES})
-    list(APPEND plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/open62541/plugin/nodesetloader.h)
+    list(APPEND plugin_headers ${PROJECT_SOURCE_DIR}/plugins/include/opcua/plugin/nodesetloader.h)
     list(APPEND plugin_sources ${PROJECT_SOURCE_DIR}/plugins/ua_nodesetloader.c)
-    list(APPEND open62541_LIBRARIES ${NODESETLOADER_DEPS_LIBS})
+    list(APPEND opcua_LIBRARIES ${NODESETLOADER_DEPS_LIBS})
 endif()
 
 #########################
@@ -1106,11 +1106,11 @@ ua_generate_datatypes(INTERNAL NAME "transport" TARGET_SUFFIX "transport" NAMESP
                       FILES_SELECTED "${PROJECT_SOURCE_DIR}/tools/schema/datatypes_transport.txt")
 
 # statuscode explanation
-add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes.h
-                          ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes.c
+add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes.h
+                          ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes.c
                    PRE_BUILD
                    COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/generate_statuscode_descriptions.py
-                           ${UA_FILE_STATUSCODES} ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes
+                           ${UA_FILE_STATUSCODES} ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes
                    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/generate_statuscode_descriptions.py
                            ${UA_FILE_STATUSCODES})
 
@@ -1120,48 +1120,48 @@ ua_generate_nodeid_header(NAME "nodeids" ID_PREFIX "NS0" TARGET_SUFFIX "ids-ns0"
 
 # we need a custom target to avoid that the generator is called concurrently and
 # thus overwriting files while the other thread is compiling
-add_custom_target(open62541-generator-statuscode DEPENDS
-                  ${PROJECT_BINARY_DIR}/src_generated/open62541/nodeids.h
-                  ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes.h
-                  ${PROJECT_BINARY_DIR}/src_generated/open62541/statuscodes.c)
+add_custom_target(opcua-generator-statuscode DEPENDS
+                  ${PROJECT_BINARY_DIR}/src_generated/opcua/nodeids.h
+                  ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes.h
+                  ${PROJECT_BINARY_DIR}/src_generated/opcua/statuscodes.c)
 
 if(UA_ENABLE_AMALGAMATION)
     # single-file release
-    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/open62541.h
+    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/opcua.h
                        PRE_BUILD
                        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
-                               ${OPEN62541_VERSION} ${CMAKE_CURRENT_BINARY_DIR}/open62541.h
+                               ${opcua_VERSION} ${CMAKE_CURRENT_BINARY_DIR}/opcua.h
                                ${exported_headers} ${NODESETLOADER_PUBLIC_HEADERS} ${plugin_headers}
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
                                ${exported_headers} ${plugin_headers})
 
-    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/open62541.c
+    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/opcua.c
                        PRE_BUILD
                        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py
-                               ${OPEN62541_VERSION} ${CMAKE_CURRENT_BINARY_DIR}/open62541.c
+                               ${opcua_VERSION} ${CMAKE_CURRENT_BINARY_DIR}/opcua.c
                                ${lib_headers} ${NODESETLOADER_PRIVATE_HEADERS} ${lib_sources} ${plugin_sources}
                        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/tools/amalgamate.py ${lib_headers}
                                ${lib_sources} ${plugin_sources})
 
-    add_custom_target(open62541-amalgamation DEPENDS ${PROJECT_BINARY_DIR}/open62541.c
-                                                     ${PROJECT_BINARY_DIR}/open62541.h)
+    add_custom_target(opcua-amalgamation DEPENDS ${PROJECT_BINARY_DIR}/opcua.c
+                                                     ${PROJECT_BINARY_DIR}/opcua.h)
 endif()
 
 ua_generate_nodeset(NAME "ns0" FILE ${UA_FILE_NODESETS}
                     INTERNAL BLACKLIST ${UA_FILE_NS0_BLACKLIST}
                     IGNORE "${PROJECT_SOURCE_DIR}/tools/nodeset_compiler/NodeID_NS0_Base.txt"
-                    DEPENDS_TARGET "open62541-generator-types")
+                    DEPENDS_TARGET "opcua-generator-types")
 
 if(UA_ENABLE_NODESET_INJECTOR)
     message(STATUS "Nodesetinjector feature enabled")
     cmake_minimum_required(VERSION 3.20)
-    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/open62541/nodesetinjector.h
-                       ${PROJECT_BINARY_DIR}/src_generated/open62541/nodesetinjector.c PRE_BUILD
+    add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src_generated/opcua/nodesetinjector.h
+                       ${PROJECT_BINARY_DIR}/src_generated/opcua/nodesetinjector.c PRE_BUILD
                        COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tools/nodeset_injector/generate_nodesetinjector.py
-                       ${PROJECT_BINARY_DIR}/src_generated/open62541/nodesetinjector)
-    add_custom_target(open62541-generator-nodesetinjector DEPENDS
-                      ${PROJECT_BINARY_DIR}/src_generated/open62541/nodesetinjector.c
-                      ${PROJECT_BINARY_DIR}/src_generated/open62541/nodesetinjector.h)
+                       ${PROJECT_BINARY_DIR}/src_generated/opcua/nodesetinjector)
+    add_custom_target(opcua-generator-nodesetinjector DEPENDS
+                      ${PROJECT_BINARY_DIR}/src_generated/opcua/nodesetinjector.c
+                      ${PROJECT_BINARY_DIR}/src_generated/opcua/nodesetinjector.h)
     set(UA_NODESETINJECTOR_GENERATORS "")
     set(UA_NODESETINJECTOR_SOURCE_FILES "")
     set(UA_NODESETINJECTOR_EXAMPLE_NAMES "")
@@ -1179,57 +1179,57 @@ assign_source_group(${plugin_headers} ${plugin_sources})
 # When building packages, include the source in the library name to enable parallel
 # installation of multiple versions. We may break the ABI between minor releases!
 
-add_library(open62541-object OBJECT ${lib_sources} ${lib_headers} ${exported_headers})
-target_include_directories(open62541-object PRIVATE ${PROJECT_SOURCE_DIR}/src)
+add_library(opcua-object OBJECT ${lib_sources} ${lib_headers} ${exported_headers})
+target_include_directories(opcua-object PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
-add_custom_target(open62541-code-generation DEPENDS open62541-generator-types
-                                                    open62541-generator-transport
-                                                    open62541-generator-statuscode
-                                                    open62541-generator-namespace)
+add_custom_target(opcua-code-generation DEPENDS opcua-generator-types
+                                                    opcua-generator-transport
+                                                    opcua-generator-statuscode
+                                                    opcua-generator-namespace)
 
 if(UA_ENABLE_NODESET_INJECTOR)
-    add_dependencies(open62541-code-generation open62541-generator-nodesetinjector)
+    add_dependencies(opcua-code-generation opcua-generator-nodesetinjector)
 endif()
 
 # stack protector and optimization are disabled for the huge ns0 file
 if(UA_NAMESPACE_ZERO STREQUAL "FULL" AND NOT MSVC)
-    set_source_files_properties(${PROJECT_BINARY_DIR}/src_generated/open62541/namespace0_generated.c
+    set_source_files_properties(${PROJECT_BINARY_DIR}/src_generated/opcua/namespace0_generated.c
                                 PROPERTIES COMPILE_FLAGS "-fno-stack-protector -O0")
 endif()
 
-add_library(open62541-plugins OBJECT ${plugin_sources} ${exported_headers})
-add_dependencies(open62541-plugins open62541-generator-types open62541-generator-transport open62541-generator-namespace)
-target_include_directories(open62541-plugins PRIVATE ${PROJECT_SOURCE_DIR}/plugins)
-target_include_directories(open62541-plugins PRIVATE ${PROJECT_BINARY_DIR}/src_generated)
-target_compile_definitions(open62541-plugins PRIVATE -DUA_DYNAMIC_LINKING_EXPORT)
-set_target_properties(open62541-plugins PROPERTIES FOLDER "open62541/lib")
+add_library(opcua-plugins OBJECT ${plugin_sources} ${exported_headers})
+add_dependencies(opcua-plugins opcua-generator-types opcua-generator-transport opcua-generator-namespace)
+target_include_directories(opcua-plugins PRIVATE ${PROJECT_SOURCE_DIR}/plugins)
+target_include_directories(opcua-plugins PRIVATE ${PROJECT_BINARY_DIR}/src_generated)
+target_compile_definitions(opcua-plugins PRIVATE -DUA_DYNAMIC_LINKING_EXPORT)
+set_target_properties(opcua-plugins PROPERTIES FOLDER "opcua/lib")
 
 if(UA_ENABLE_COVERAGE)
-    add_coverage(open62541-object)
-    add_coverage(open62541-plugins)
+    add_coverage(opcua-object)
+    add_coverage(opcua-plugins)
 endif()
 
-add_library(open62541 $<TARGET_OBJECTS:open62541-object> $<TARGET_OBJECTS:open62541-plugins>)
+add_library(opcua $<TARGET_OBJECTS:opcua-object> $<TARGET_OBJECTS:opcua-plugins>)
 
 if(UA_ENABLE_ENCRYPTION_LIBRESSL)
     # Prevent Wincrypt override warning.
-    target_compile_definitions(open62541-plugins PUBLIC NOCRYPT=1)
-    target_compile_definitions(open62541-object PUBLIC NOCRYPT=1)
-    target_compile_definitions(open62541 PUBLIC NOCRYPT=1)
+    target_compile_definitions(opcua-plugins PUBLIC NOCRYPT=1)
+    target_compile_definitions(opcua-object PUBLIC NOCRYPT=1)
+    target_compile_definitions(opcua PUBLIC NOCRYPT=1)
 endif()
 
 # Declare include directories
 function(include_directories_private)
     foreach(_include_dir IN ITEMS ${ARGN})
-        target_include_directories(open62541-object PRIVATE ${_include_dir})
-        target_include_directories(open62541-plugins PRIVATE ${_include_dir})
+        target_include_directories(opcua-object PRIVATE ${_include_dir})
+        target_include_directories(opcua-plugins PRIVATE ${_include_dir})
     endforeach()
 endfunction()
 
 function(include_directories_public)
     include_directories_private(${ARGN})
     foreach(_include_dir IN ITEMS ${ARGN})
-        target_include_directories(open62541 PUBLIC $<BUILD_INTERFACE:${_include_dir}>)
+        target_include_directories(opcua PUBLIC $<BUILD_INTERFACE:${_include_dir}>)
     endforeach()
 endfunction()
 
@@ -1260,27 +1260,27 @@ if(UA_ENABLE_NODESETLOADER)
     include_directories_private(${NODESETLOADER_PRIVATE_INCLUDES})
 endif()
 
-add_dependencies(open62541-object open62541-code-generation)
+add_dependencies(opcua-object opcua-code-generation)
 
-# Ensure that the open62541::open62541 alias can be used inside open62541's build
-add_library(open62541::open62541 ALIAS open62541)
+# Ensure that the opcua::opcua alias can be used inside opcua's build
+add_library(opcua::opcua ALIAS opcua)
 
 # Export Symbols
-target_compile_definitions(open62541-object PRIVATE -DUA_DYNAMIC_LINKING_EXPORT)
-target_compile_definitions(open62541 PRIVATE -DUA_DYNAMIC_LINKING_EXPORT)
+target_compile_definitions(opcua-object PRIVATE -DUA_DYNAMIC_LINKING_EXPORT)
+target_compile_definitions(opcua PRIVATE -DUA_DYNAMIC_LINKING_EXPORT)
 if(UA_ENABLE_DISCOVERY_MULTICAST)
-    target_compile_definitions(open62541-object PRIVATE -DMDNSD_DYNAMIC_LINKING_EXPORT)
-    target_compile_definitions(open62541 PRIVATE -DMDNSD_DYNAMIC_LINKING_EXPORT)
+    target_compile_definitions(opcua-object PRIVATE -DMDNSD_DYNAMIC_LINKING_EXPORT)
+    target_compile_definitions(opcua PRIVATE -DMDNSD_DYNAMIC_LINKING_EXPORT)
 endif()
 
 # Generate properly versioned shared library links on Linux
-SET_TARGET_PROPERTIES(open62541 PROPERTIES
-                      SOVERSION "${OPEN62541_VER_MAJOR}.${OPEN62541_VER_MINOR}"
-                      VERSION "${OPEN62541_VER_MAJOR}.${OPEN62541_VER_MINOR}.${OPEN62541_VER_PATCH}")
+SET_TARGET_PROPERTIES(opcua PROPERTIES
+                      SOVERSION "${opcua_VER_MAJOR}.${opcua_VER_MINOR}"
+                      VERSION "${opcua_VER_MAJOR}.${opcua_VER_MINOR}.${opcua_VER_PATCH}")
 
 # DLL requires linking to dependencies
-target_link_libraries(open62541 PUBLIC ${open62541_PUBLIC_LIBRARIES})
-target_link_libraries(open62541 PRIVATE ${open62541_LIBRARIES})
+target_link_libraries(opcua PUBLIC ${opcua_PUBLIC_LIBRARIES})
+target_link_libraries(opcua PRIVATE ${opcua_LIBRARIES})
 
 ##########################
 # Build Selected Targets #
@@ -1329,67 +1329,67 @@ include(linting_target)
 # Enable shared library with `-DBUILD_SHARED_LIBS=ON`
 
 # export library (either static or shared depending on BUILD_SHARED_LIBS)
-install(TARGETS open62541
-        EXPORT open62541Targets
+install(TARGETS opcua
+        EXPORT opcuaTargets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
         INCLUDES DESTINATION include)
 
-set(open62541_install_tools_dir share/open62541)
-set(open62541_install_schema_dir share/open62541/schema)
+set(opcua_install_tools_dir share/opcua)
+set(opcua_install_schema_dir share/opcua/schema)
 
-# Create open62541Config.cmake
+# Create opcuaConfig.cmake
 include(CMakePackageConfigHelpers)
-set(cmake_configfile_install ${CMAKE_INSTALL_LIBDIR}/cmake/open62541)
-configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/open62541Config.cmake.in"
-                              "${CMAKE_CURRENT_BINARY_DIR}/open62541Config.cmake"
+set(cmake_configfile_install ${CMAKE_INSTALL_LIBDIR}/cmake/opcua)
+configure_package_config_file("${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/opcuaConfig.cmake.in"
+                              "${CMAKE_CURRENT_BINARY_DIR}/opcuaConfig.cmake"
                               INSTALL_DESTINATION "${cmake_configfile_install}"
-                              PATH_VARS open62541_install_tools_dir
-                                        open62541_install_schema_dir)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/open62541Config.cmake"
-              "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/open62541Macros.cmake"
+                              PATH_VARS opcua_install_tools_dir
+                                        opcua_install_schema_dir)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/opcuaConfig.cmake"
+              "${CMAKE_CURRENT_SOURCE_DIR}/tools/cmake/opcuaMacros.cmake"
         DESTINATION "${cmake_configfile_install}")
 
-# Create open62541ConfigVersion.cmake
-set(open62541_VERSION)
-get_target_property(open62541_VERSION open62541 VERSION)
-write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/open62541ConfigVersion.cmake"
-                                 VERSION ${open62541_VERSION} COMPATIBILITY AnyNewerVersion)
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/open62541ConfigVersion.cmake"
+# Create opcuaConfigVersion.cmake
+set(opcua_VERSION)
+get_target_property(opcua_VERSION opcua VERSION)
+write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/opcuaConfigVersion.cmake"
+                                 VERSION ${opcua_VERSION} COMPATIBILITY AnyNewerVersion)
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/opcuaConfigVersion.cmake"
         DESTINATION "${cmake_configfile_install}")
 
-# Create open62541Targets.cmake
-install(EXPORT open62541Targets
-        FILE open62541Targets.cmake
+# Create opcuaTargets.cmake
+install(EXPORT opcuaTargets
+        FILE opcuaTargets.cmake
         DESTINATION "${cmake_configfile_install}"
-        NAMESPACE open62541::)
-export(TARGETS open62541
-       NAMESPACE open62541::
-       FILE ${CMAKE_CURRENT_BINARY_DIR}/open62541Targets.cmake)
+        NAMESPACE opcua::)
+export(TARGETS opcua
+       NAMESPACE opcua::
+       FILE ${CMAKE_CURRENT_BINARY_DIR}/opcuaTargets.cmake)
 
-# Generate and install open62541.pc
+# Generate and install opcua.pc
 set(pkgcfgpubliclibs "")
-foreach(lib ${open62541_PUBLIC_LIBRARIES})
+foreach(lib ${opcua_PUBLIC_LIBRARIES})
     set(pkgcfgpubliclibs "${pkgcfgpubliclibs}-l${lib} ")
 endforeach()
 
 if(BUILD_SHARED_LIBS)
-    foreach(lib ${open62541_LIBRARIES})
+    foreach(lib ${opcua_LIBRARIES})
         set(pkgcfgpubliclibs "${pkgcfgpubliclibs}-l${lib} ")
     endforeach()
 endif()
 
-configure_file(tools/open62541.pc.in ${PROJECT_BINARY_DIR}/src_generated/open62541.pc @ONLY)
+configure_file(tools/opcua.pc.in ${PROJECT_BINARY_DIR}/src_generated/opcua.pc @ONLY)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-    install(FILES "${PROJECT_BINARY_DIR}/src_generated/open62541.pc"
+    install(FILES "${PROJECT_BINARY_DIR}/src_generated/opcua.pc"
             DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 endif()
 
 # Install nodeset compiler
 install(DIRECTORY "tools/certs" "tools/nodeset_compiler"
-        DESTINATION ${open62541_install_tools_dir}
+        DESTINATION ${opcua_install_tools_dir}
         FILES_MATCHING
         PATTERN "*"
         PATTERN "__pycache__" EXCLUDE
@@ -1400,7 +1400,7 @@ install(DIRECTORY "tools/certs" "tools/nodeset_compiler"
 # Install schemas
 # Trailing slash to prevent "schema/schema" nesting
 install(DIRECTORY ${UA_SCHEMA_DIR}/
-        DESTINATION ${open62541_install_schema_dir}
+        DESTINATION ${opcua_install_schema_dir}
         FILES_MATCHING
         PATTERN "*.xml"
         PATTERN "*Types.bsd"
@@ -1412,15 +1412,15 @@ install(DIRECTORY ${UA_SCHEMA_DIR}/
 set(UA_install_tools_files "tools/generate_datatypes.py"
                            "tools/generate_nodeid_header.py"
                            "tools/generate_statuscode_descriptions.py")
-install(FILES ${UA_install_tools_files} DESTINATION ${open62541_install_tools_dir}
+install(FILES ${UA_install_tools_files} DESTINATION ${opcua_install_tools_dir}
         PERMISSIONS OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE)
 
-# Recreate the include folder structure from the source also in /usr/include/open62541
+# Recreate the include folder structure from the source also in /usr/include/opcua
 set(FILES_TO_INSTALL ${exported_headers} ${plugin_headers})
-set(BASE_PATH_MAIN "${PROJECT_SOURCE_DIR}/include/open62541")
-set(BASE_PATH_PLUGINS "${PROJECT_SOURCE_DIR}/plugins/include/open62541")
+set(BASE_PATH_MAIN "${PROJECT_SOURCE_DIR}/include/opcua")
+set(BASE_PATH_PLUGINS "${PROJECT_SOURCE_DIR}/plugins/include/opcua")
 set(BASE_PATH_ARCH "${PROJECT_SOURCE_DIR}/arch")
-set(BASE_PATH_GENERATED "${PROJECT_BINARY_DIR}/src_generated/open62541")
+set(BASE_PATH_GENERATED "${PROJECT_BINARY_DIR}/src_generated/opcua")
 set(BASE_PATH_DEPS "${PROJECT_SOURCE_DIR}/deps")
 
 foreach ( file ${FILES_TO_INSTALL} )
@@ -1438,7 +1438,7 @@ foreach ( file ${FILES_TO_INSTALL} )
     if("${has_base_path}" EQUAL 0)
         install(FILES ${full_path} DESTINATION include${dir})
     else()
-        install(FILES ${full_path} DESTINATION include/open62541${dir})
+        install(FILES ${full_path} DESTINATION include/opcua${dir})
     endif()
 endforeach()
 
@@ -1449,15 +1449,15 @@ endforeach()
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "_CmakePredifinedTargets")
 
-set_target_properties(open62541 PROPERTIES FOLDER "open62541/lib")
-set_target_properties(open62541-object PROPERTIES FOLDER "open62541/lib")
+set_target_properties(opcua PROPERTIES FOLDER "opcua/lib")
+set_target_properties(opcua-object PROPERTIES FOLDER "opcua/lib")
 
-set_target_properties(open62541-generator-namespace PROPERTIES FOLDER "open62541/generators")
-set_target_properties(open62541-generator-statuscode PROPERTIES FOLDER "open62541/generators")
-set_target_properties(open62541-generator-transport PROPERTIES FOLDER "open62541/generators")
-set_target_properties(open62541-generator-types PROPERTIES FOLDER "open62541/generators")
+set_target_properties(opcua-generator-namespace PROPERTIES FOLDER "opcua/generators")
+set_target_properties(opcua-generator-statuscode PROPERTIES FOLDER "opcua/generators")
+set_target_properties(opcua-generator-transport PROPERTIES FOLDER "opcua/generators")
+set_target_properties(opcua-generator-types PROPERTIES FOLDER "opcua/generators")
 if(UA_ENABLE_NODESET_INJECTOR)
-    set_target_properties(open62541-generator-nodesetinjector PROPERTIES FOLDER "open62541/generators")
+    set_target_properties(opcua-generator-nodesetinjector PROPERTIES FOLDER "opcua/generators")
     add_subdirectory(tools/nodeset_injector)
     set(UA_NODESETINJECTOR_GENERATORS ${UA_NODESETINJECTOR_GENERATORS} PARENT_SCOPE)
 endif()

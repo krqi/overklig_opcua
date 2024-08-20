@@ -6,7 +6,7 @@ if ($env:CC_SHORTNAME -eq "mingw" -or $env:CC_SHORTNAME -eq "clang-mingw") {
         exit $LASTEXITCODE
     }
     # pacman may complain that the directory does not exist, thus create it.
-    # Se https://github.com/open62541/open62541/issues/2068
+    # Se https://github.com/opcua/opcua/issues/2068
     & C:\msys64\usr\bin\mkdir -p /var/cache/pacman/pkg
     # Update all packages. Ensure that we have up-to-date clang version.
     # Otherwise we run into issue: https://github.com/msys2/MINGW-packages/issues/6576

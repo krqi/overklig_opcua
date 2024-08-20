@@ -1,22 +1,9 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
-#include <open62541/util.h>
+#include <opcua/util.h>
 #include "ua_eventfilter_parser.h"
 
-/* This compilation unit uses the re2c lexer generator. The final C source is
- * generated with the following script:
- *
- *   re2c -i --no-generation-date ua_eventfilter_lex.re > ua_eventfilter_lex.c
- *
- * In order that users of the SDK don't need to install re2c, always commit a
- * recent ua_eventfilter_lex.c if changes are made to the lexer. */
 
-/* Undefine macros to prevent clashes in the amalgamation build */
+
 #undef YYPEEK
 #undef YYSKIP
 #undef YYBACKUP
@@ -36,16 +23,6 @@
 #define YYSHIFTSTAG(t, shift) t += shift
 #define YYRESTORETAG(t) pos = t;
 
-/*!re2c
-    re2c:define:YYCTYPE = char;
-    re2c:flags:tags = 1;
-    re2c:yyfill:enable = 0;
-    re2c:flags:input = custom;
-
-    space   = (' ' | '\t' | '\b' | '\v' | '\n' | '\r')+;
-    newline = ('\n' | '\r')+;
-    escaped = ('&' (.\[\x00]) | [^\x00/.<>:#!&,()\x5b\x5d \t\n\v\f\r]);
-*/
 
 UA_StatusCode
 UA_EventFilter_skip(const UA_ByteString content, size_t *offset,
@@ -57,20 +34,6 @@ UA_EventFilter_skip(const UA_ByteString content, size_t *offset,
     *offset = (uintptr_t)(pos - (const char*)content.data);
     size_t initial = *offset;
 
-    /*!re2c
-    space             { goto begin; }
-    '//' [^\n\r\x00]* { goto begin; }
-    '/*' { for(; pos < end - 1; pos++)
-           { if(pos[0] == '*' && pos[1] == '/') { pos += 2; goto begin; } }
-           unsigned c = 0, l = 0;
-           pos2lines(content, initial, &l, &c);
-           UA_LOG_ERROR(ctx->logger, UA_LOGCATEGORY_USERLAND,
-                        "The comment starting at line %u, column %u "
-                        "never terminates", l, c);
-           return UA_STATUSCODE_BADINTERNALERROR;
-         }
-    * { return UA_STATUSCODE_GOOD; }
-    */
 }
 
 int
@@ -78,86 +41,18 @@ UA_EventFilter_lex(const UA_ByteString content, size_t *offset,
                    EFParseContext *ctx, Operand **token) {
     const char *pos = (const char*)&content.data[*offset];
     const char *end = (const char*)&content.data[content.length];
-    const char *m, *b; /* marker, match begin */
-    /*!stags:re2c format = 'const char *@@;'; */
-    const UA_DataType *lt; /* literal type */
+    const char *m, *b; 
+    
+    const UA_DataType *lt; 
     UA_StatusCode res = UA_STATUSCODE_GOOD;
     UA_ByteString match;
     UA_FilterOperator f;
 
     int tokenId = 0;
     while(true) {
-        /* Store the beginning */
+        
         b = pos;
 
-        /*!re2c
-        /* Structural Token */
-        '('      { tokenId = EF_TOK_LPAREN;     goto finish; }
-        ')'      { tokenId = EF_TOK_RPAREN;     goto finish; }
-        '['      { tokenId = EF_TOK_LBRACKET;   goto finish; }
-        ']'      { tokenId = EF_TOK_RBRACKET;   goto finish; }
-        ','      { tokenId = EF_TOK_COMMA;      goto finish; }
-        ':='     { tokenId = EF_TOK_COLONEQUAL; goto finish; }
-        'SELECT' / (space | '?')       { tokenId = EF_TOK_SELECT; goto finish; }
-        'WHERE'  / (space | '?' | '(') { tokenId = EF_TOK_WHERE;  goto finish; }
-        'FOR'    / (space | '?')       { tokenId = EF_TOK_FOR;    goto finish; }
-
-        /* Operators */
-        ('AND'                | '&&') { f = UA_FILTEROPERATOR_AND;     tokenId = EF_TOK_AND;     goto make_op; }
-        ('OR'                 | '||') { f = UA_FILTEROPERATOR_OR;      tokenId = EF_TOK_OR;      goto make_op; }
-        ('NOT'                | '!')  { f = UA_FILTEROPERATOR_NOT;     tokenId = EF_TOK_NOT;     goto make_op; }
-        'BETWEEN'                     { f = UA_FILTEROPERATOR_BETWEEN; tokenId = EF_TOK_BETWEEN; goto make_op; }
-        'INLIST'                      { f = UA_FILTEROPERATOR_INLIST;  tokenId = EF_TOK_INLIST;  goto make_op; }
-        'ISNULL'                      { f = UA_FILTEROPERATOR_ISNULL;                            goto unary_op; }
-        'OFTYPE'                      { f = UA_FILTEROPERATOR_OFTYPE;                            goto unary_op; }
-        ('EQUALS'             | '==') { f = UA_FILTEROPERATOR_EQUALS;                            goto binary_op; }
-        ('GREATERTHANOREQUAL' | '>=') { f = UA_FILTEROPERATOR_GREATERTHANOREQUAL;                goto binary_op; }
-        ('GREATERTHAN'        | '>')  { f = UA_FILTEROPERATOR_GREATERTHAN;                       goto binary_op; }
-        ('LESSTHANOREQUAL'    | '<=') { f = UA_FILTEROPERATOR_LESSTHANOREQUAL;                   goto binary_op; }
-        ('LESSTHAN'           | '<')  { f = UA_FILTEROPERATOR_LESSTHAN;                          goto binary_op; }
-        ('BITWISEAND'         | '&')  { f = UA_FILTEROPERATOR_BITWISEAND;                        goto binary_op; }
-        ('BITWISEOR'          | '|')  { f = UA_FILTEROPERATOR_BITWISEOR;                         goto binary_op; }
-        ('CAST'               | '->') { f = UA_FILTEROPERATOR_CAST;                              goto binary_op; }
-        'LIKE'                        { f = UA_FILTEROPERATOR_LIKE;                              goto binary_op; }
-        '$' [a-zA-Z0-9_]+             { goto namedoperand; }
-
-        /* Literal */
-        '{'                                                    { goto json; }
-        'BYTE'           space @b [0-9]+                       { lt = &UA_TYPES[UA_TYPES_BYTE];           goto lit; }
-        'SBYTE'          space @b '-'? [0-9]+                  { lt = &UA_TYPES[UA_TYPES_SBYTE];          goto lit; }
-        'UINT16'         space @b [0-9]+                       { lt = &UA_TYPES[UA_TYPES_UINT16];         goto lit; }
-        'INT16'          space @b '-'? [0-9]+                  { lt = &UA_TYPES[UA_TYPES_INT16];          goto lit; }
-        'UINT32'         space @b [0-9]+                       { lt = &UA_TYPES[UA_TYPES_UINT32];         goto lit; }
-        'INT32'          space @b '-'? [0-9]+                  { lt = &UA_TYPES[UA_TYPES_INT32];          goto lit; }
-        'UINT64'         space @b [0-9]+                       { lt = &UA_TYPES[UA_TYPES_UINT64];         goto lit; }
-        'INT64'          space @b '-'? [0-9]+                  { lt = &UA_TYPES[UA_TYPES_INT64];          goto lit; }
-        'FLOAT'          space @b ('+'|'-')? [0-9.eE+-]+       { lt = &UA_TYPES[UA_TYPES_FLOAT];          goto lit; }
-        'DOUBLE'         space @b ('+'|'-')? [0-9.eE+-]+       { lt = &UA_TYPES[UA_TYPES_DOUBLE];         goto lit; }
-        'STATUSCODE'     space @b [0-9a-zA-Z]+                 { lt = &UA_TYPES[UA_TYPES_STATUSCODE];     goto lit; }
-        'BOOLEAN'        space @b ('true' | 'false')           { lt = &UA_TYPES[UA_TYPES_BOOLEAN];        goto lit; }
-        'STRING'         space @b '"' ('\\"' | [^"\x00])* '"'  { lt = &UA_TYPES[UA_TYPES_STRING];         goto lit; }
-        'STRING'         space @b ['] ('\\\'' | [^'\x00])* ['] { lt = &UA_TYPES[UA_TYPES_STRING];         goto lit; }
-        'GUID'           space @b [a-zA-Z-]                    { lt = &UA_TYPES[UA_TYPES_GUID];           goto lit; }
-        'BYTESTRING'     space @b [a-zA-Z=]+                   { lt = &UA_TYPES[UA_TYPES_BYTESTRING];     goto lit; }
-        'NODEID'         space @b escaped*                     { lt = &UA_TYPES[UA_TYPES_NODEID];         goto lit; }
-        'EXPANDEDNODEID' space @b escaped*                     { lt = &UA_TYPES[UA_TYPES_EXPANDEDNODEID]; goto lit; }
-        'DATETIME'       space @b [a-zA-Z:-]+                  { lt = &UA_TYPES[UA_TYPES_DATETIME];       goto lit; }
-        'QUALIFIEDNAME'  space @b ([0-9]+ ':')? escaped*       { lt = &UA_TYPES[UA_TYPES_QUALIFIEDNAME];  goto lit; }
-        'LOCALIZEDTEXT'  space @b escaped* ':' escaped*        { lt = &UA_TYPES[UA_TYPES_LOCALIZEDTEXT];  goto lit; }
-
-        /* SimpleAttributeOperand - contains at least one unescaped '/' or '#' */
-        escaped* ('/' | '#') (escaped | '/' | '#' | ':')* ('[' [0-9,:]+ ']')? { goto sao; }
-
-        /* Naked Literal */
-        '"' ('\\"' | [^"\x00])* '"'                        { lt = &UA_TYPES[UA_TYPES_STRING]; goto lit; }
-        ['] ('\\\'' | [^'\x00])* [']                       { lt = &UA_TYPES[UA_TYPES_STRING]; goto lit; }
-        'true' | 'false'                                   { lt = &UA_TYPES[UA_TYPES_BOOLEAN]; goto lit; }
-        '-'? [0-9]+                                        { lt = &UA_TYPES[UA_TYPES_INT32]; goto lit; }
-        ("ns=" [0-9]+ ";")? ("i="|"s="|"g="|"b=") escaped+ { lt = &UA_TYPES[UA_TYPES_NODEID]; goto lit; }
-
-        /* No match */
-        * { goto finish; }
-        */
     }
 
 unary_op:
@@ -183,7 +78,7 @@ namedoperand:
     goto finish;
 
 json:
-    /* Parse a literal / variant in JSON encoding */
+    
     match.length = (uintptr_t)(end-b);
     match.data = (UA_Byte*)(uintptr_t)b;
     *token = create_operand(ctx, OT_LITERAL);
@@ -198,7 +93,7 @@ json:
     goto finish;
 
 lit:
-    /* Parse a literal based on the discovered type */
+    
     match.length = (uintptr_t)(pos-b);
     match.data = (UA_Byte*)(uintptr_t)b;
     *token = create_operand(ctx, OT_LITERAL);
@@ -217,7 +112,7 @@ lit:
     goto finish;
 
 sao:
-    /* Parse a SimpleAttributeOperand */
+    
     match.length = (uintptr_t)(pos-b);
     match.data = (UA_Byte*)(uintptr_t)b;
     *token = create_operand(ctx, OT_SAO);
@@ -228,7 +123,7 @@ finish:
     if(pos > end)
         pos = end;
 
-    /* Update the offset */
+    
     if(tokenId != 0)
         *offset = (uintptr_t)(pos - (const char*)content.data);
 

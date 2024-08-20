@@ -1,22 +1,10 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2015-2018, 2021 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2015-2016 (c) Sten Grüner
- *    Copyright 2015 (c) Chris Iatrou
- *    Copyright 2015, 2017 (c) Florian Palm
- *    Copyright 2015 (c) Oleksiy Vasylyev
- *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Julian Grothoff
- */
 
 #include "ua_server_internal.h"
 #include "ua_types_encoding_binary.h"
 
-/*********************/
-/* ReferenceType Set */
-/*********************/
+
+
+
 
 #define UA_REFTYPES_ALL_MASK (~(UA_UInt32)0)
 #define UA_REFTYPES_ALL_MASK2 UA_REFTYPES_ALL_MASK, UA_REFTYPES_ALL_MASK
@@ -44,9 +32,9 @@
 const UA_ReferenceTypeSet UA_REFERENCETYPESET_NONE = {{0}};
 const UA_ReferenceTypeSet UA_REFERENCETYPESET_ALL = {{UA_REFTYPES_ALL_ARRAY}};
 
-/*****************/
-/* Node Pointers */
-/*****************/
+
+
+
 
 #define UA_NODEPOINTER_MASK 0x03
 #define UA_NODEPOINTER_TAG_IMMEDIATE 0x00
@@ -80,7 +68,7 @@ UA_NodePointer_copy(UA_NodePointer in, UA_NodePointer *out) {
     switch(tag) {
     case UA_NODEPOINTER_TAG_NODE:
         in.id = &in.node->nodeId;
-        goto nodeid; /* fallthrough */
+        goto nodeid; 
     case UA_NODEPOINTER_TAG_NODEID:
     nodeid:
         out->id = UA_NodeId_new();
@@ -127,7 +115,7 @@ UA_NodePointer_order(UA_NodePointer p1, UA_NodePointer p2) {
     if(p1.immediate == p2.immediate)
         return UA_ORDER_EQ;
 
-    /* Extract the tag and resolve pointers to nodes */
+    
     UA_Byte tag1 = p1.immediate & UA_NODEPOINTER_MASK;
     if(tag1 == UA_NODEPOINTER_TAG_NODE) {
         p1 = UA_NodePointer_fromNodeId(&p1.node->nodeId);
@@ -139,16 +127,16 @@ UA_NodePointer_order(UA_NodePointer p1, UA_NodePointer p2) {
         tag2 = p2.immediate & UA_NODEPOINTER_MASK;
     }
 
-    /* Different tags, cannot be identical */
+    
     if(tag1 != tag2)
         return (tag1 > tag2) ? UA_ORDER_MORE : UA_ORDER_LESS;
 
-    /* Immediate */
+    
     if(UA_LIKELY(tag1 == UA_NODEPOINTER_TAG_IMMEDIATE))
         return (p1.immediate > p2.immediate) ?
             UA_ORDER_MORE : UA_ORDER_LESS;
 
-    /* Compare from pointers */
+    
     p1.immediate &= ~(uintptr_t)UA_NODEPOINTER_MASK;
     p2.immediate &= ~(uintptr_t)UA_NODEPOINTER_MASK;
     if(tag1 == UA_NODEPOINTER_TAG_EXPANDEDNODEID)
@@ -166,13 +154,9 @@ UA_NodePointer_fromNodeId(const UA_NodeId *id) {
     }
 
 #if SIZE_MAX > UA_UINT32_MAX
-    /* 64bit: 4 Byte for the numeric identifier + 2 Byte for the namespaceIndex
-     *        + 1 Byte for the tagging bit (zero) */
     np.immediate  = ((uintptr_t)id->identifier.numeric) << 32;
     np.immediate |= ((uintptr_t)id->namespaceIndex) << 8;
 #else
-    /* 32bit: 3 Byte for the numeric identifier + 6 Bit for the namespaceIndex
-     *        + 2 Bit for the tagging bit (zero) */
     if(id->namespaceIndex < (0x01 << 6) &&
        id->identifier.numeric < (0x01 << 24)) {
         np.immediate  = ((uintptr_t)id->identifier.numeric) << 8;
@@ -203,10 +187,10 @@ UA_NodePointer_toNodeId(UA_NodePointer np) {
 
     UA_NodeId id;
     id.identifierType = UA_NODEIDTYPE_NUMERIC;
-#if SIZE_MAX > UA_UINT32_MAX /* 64bit */
+#if SIZE_MAX > UA_UINT32_MAX 
     id.namespaceIndex = (UA_UInt16)(np.immediate >> 8);
     id.identifier.numeric = (UA_UInt32)(np.immediate >> 32);
-#else                        /* 32bit */
+#else                        
     id.namespaceIndex = ((UA_Byte)np.immediate) >> 2;
     id.identifier.numeric = np.immediate >> 8;
 #endif
@@ -226,29 +210,29 @@ UA_NodePointer_fromExpandedNodeId(const UA_ExpandedNodeId *id) {
 
 UA_ExpandedNodeId
 UA_NodePointer_toExpandedNodeId(UA_NodePointer np) {
-    /* Resolve node pointer to get the NodeId */
+    
     UA_Byte tag = np.immediate & UA_NODEPOINTER_MASK;
     if(tag == UA_NODEPOINTER_TAG_NODE) {
         np = UA_NodePointer_fromNodeId(&np.node->nodeId);
         tag = np.immediate & UA_NODEPOINTER_MASK;
     }
 
-    /* ExpandedNodeId, make a shallow copy */
+    
     if(tag == UA_NODEPOINTER_TAG_EXPANDEDNODEID) {
         np.immediate &= ~(uintptr_t)UA_NODEPOINTER_MASK;
         return *np.expandedId;
     }
 
-    /* NodeId, either immediate or via a pointer */
+    
     UA_ExpandedNodeId en;
     UA_ExpandedNodeId_init(&en);
     en.nodeId = UA_NodePointer_toNodeId(np);
     return en;
 }
 
-/**************/
-/* References */
-/**************/
+
+
+
 
 static UA_StatusCode
 addReferenceTarget(UA_NodeReferenceKind *refs, UA_NodePointer target,
@@ -280,7 +264,7 @@ cmpRefTargetName(const void *a, const void *b) {
         ZIP_CMP_LESS : ZIP_CMP_MORE;
 }
 
-/* Move to the array in-order, also deletes the tree elements */
+
 static void
 moveTreeToArray(UA_ReferenceTarget *array, size_t *pos,
                 UA_ReferenceTargetTreeElem *elem) {
@@ -306,7 +290,7 @@ UA_NodeReferenceKind_switch(UA_NodeReferenceKind *rk) {
     UA_assert(rk->targetsSize > 0);
 
     if(rk->hasRefTree) {
-        /* From tree to array */
+        
         UA_ReferenceTarget *array = (UA_ReferenceTarget*)
             UA_malloc(sizeof(UA_ReferenceTarget) * rk->targetsSize);
         if(!array)
@@ -318,7 +302,7 @@ UA_NodeReferenceKind_switch(UA_NodeReferenceKind *rk) {
         return UA_STATUSCODE_GOOD;
     }
 
-    /* From array to tree */
+    
     UA_NodeReferenceKind newRk = *rk;
     newRk.hasRefTree = true;
     newRk.targets.tree.idRoot = NULL;
@@ -363,7 +347,7 @@ UA_NodeReferenceKind_findTarget(const UA_NodeReferenceKind *rk,
                                 const UA_ExpandedNodeId *targetId) {
     UA_NodePointer targetP = UA_NodePointer_fromExpandedNodeId(targetId);
     if(rk->hasRefTree) {
-        /* Return from the tree */
+        
         UA_ReferenceTargetTreeElem tmpTarget;
         tmpTarget.target.targetId = targetP;
         tmpTarget.targetIdHash = UA_ExpandedNodeId_hash(targetId);
@@ -373,7 +357,7 @@ UA_NodeReferenceKind_findTarget(const UA_NodeReferenceKind *rk,
         if(result)
             return &result->target;
     } else {
-        /* Return from the array */
+        
         for(size_t i = 0; i < rk->targetsSize; i++) {
             if(UA_NodePointer_equal(targetP, rk->targets.array[i].targetId))
                 return &rk->targets.array[i];
@@ -382,14 +366,12 @@ UA_NodeReferenceKind_findTarget(const UA_NodeReferenceKind *rk,
     return NULL;
 }
 
-/* General node handling methods. There is no UA_Node_new() method here.
- * Creating nodes is part of the Nodestore layer */
 
 void UA_Node_clear(UA_Node *node) {
-    /* Delete references */
+    
     UA_Node_deleteReferences(node);
 
-    /* Delete other head content */
+    
     UA_NodeHead *head = &node->head;
     UA_NodeId_clear(&head->nodeId);
     UA_QualifiedName_clear(&head->browseName);
@@ -408,7 +390,7 @@ void UA_Node_clear(UA_Node *node) {
         UA_free(lt);
     }
 
-    /* Delete unique content of the nodeclass */
+    
     switch(head->nodeClass) {
     case UA_NODECLASS_OBJECT:
         break;
@@ -542,11 +524,11 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
     if(srchead->nodeClass != dsthead->nodeClass)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Copy standard content */
+    
     UA_StatusCode retval = UA_NodeId_copy(&srchead->nodeId, &dsthead->nodeId);
     retval |= UA_QualifiedName_copy(&srchead->browseName, &dsthead->browseName);
 
-    /* Copy the display name in several languages */
+    
     for(UA_LocalizedTextListEntry *lt = srchead->displayName; lt != NULL; lt = lt->next) {
         UA_LocalizedTextListEntry *newEntry = (UA_LocalizedTextListEntry *)
             UA_calloc(1, sizeof(UA_LocalizedTextListEntry));
@@ -556,12 +538,12 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
         }
         retval |= UA_LocalizedText_copy(&lt->localizedText, &newEntry->localizedText);
 
-        /* Add to the linked list possibly in reverse order */
+        
         newEntry->next = dsthead->displayName;
         dsthead->displayName = newEntry;
     }
 
-    /* Copy the description in several languages */
+    
     for(UA_LocalizedTextListEntry *lt = srchead->description; lt != NULL; lt = lt->next) {
         UA_LocalizedTextListEntry *newEntry = (UA_LocalizedTextListEntry *)
             UA_calloc(1, sizeof(UA_LocalizedTextListEntry));
@@ -571,7 +553,7 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
         }
         retval |= UA_LocalizedText_copy(&lt->localizedText, &newEntry->localizedText);
 
-        /* Add to the linked list possibly in reverse order */
+        
         newEntry->next = dsthead->description;
         dsthead->description= newEntry;
     }
@@ -587,7 +569,7 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
         return retval;
     }
 
-    /* Copy the references */
+    
     dsthead->references = NULL;
     if(srchead->referencesSize > 0) {
         dsthead->references = (UA_NodeReferenceKind*)
@@ -603,9 +585,9 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
             UA_NodeReferenceKind *drefs = &dsthead->references[i];
             drefs->referenceTypeIndex = srefs->referenceTypeIndex;
             drefs->isInverse = srefs->isInverse;
-            drefs->hasRefTree = srefs->hasRefTree; /* initially empty */
+            drefs->hasRefTree = srefs->hasRefTree; 
 
-            /* Copy all the targets */
+            
             if(!srefs->hasRefTree) {
                 drefs->targets.array = (UA_ReferenceTarget*)
                     UA_malloc(sizeof(UA_ReferenceTarget) * srefs->targetsSize);
@@ -618,7 +600,7 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
                         srefs->targets.array[j].targetNameHash;
                     retval = UA_NodePointer_copy(srefs->targets.array[j].targetId,
                                                  &drefs->targets.array[j].targetId);
-                    drefs->targetsSize++; /* avoid that targetsSize == 0 in error case */
+                    drefs->targetsSize++; 
                     if(retval != UA_STATUSCODE_GOOD) {
                         UA_Node_clear(dst);
                         return retval;
@@ -639,7 +621,7 @@ UA_Node_copy(const UA_Node *src, UA_Node *dst) {
         }
     }
 
-    /* Copy unique content of the nodeclass */
+    
     switch(src->head.nodeClass) {
     case UA_NODECLASS_OBJECT:
         retval = UA_ObjectNode_copy(&src->objectNode, &dst->objectNode);
@@ -720,20 +702,17 @@ UA_Node_copy_alloc(const UA_Node *src) {
     }
     return dst;
 }
-/******************************/
-/* Copy Attributes into Nodes */
-/******************************/
+
+
+
 
 static UA_StatusCode
 copyStandardAttributes(UA_NodeHead *head, const UA_NodeAttributes *attr) {
-    /* UA_NodeId_copy(&item->requestedNewNodeId.nodeId, &node->nodeId); */
-    /* UA_QualifiedName_copy(&item->browseName, &node->browseName); */
+    
+    
 
     head->writeMask = attr->writeMask;
     UA_StatusCode retval = UA_Node_insertOrUpdateDescription(head, &attr->description);
-    /* The new nodeset format has optional display names:
-     * https://github.com/open62541/open62541/issues/2627. If the display name
-     * is NULL, take the name part of the browse name */
     if(attr->displayName.text.length == 0) {
         UA_LocalizedText lt;
         UA_LocalizedText_init(&lt);
@@ -747,7 +726,7 @@ copyStandardAttributes(UA_NodeHead *head, const UA_NodeAttributes *attr) {
 static UA_StatusCode
 copyCommonVariableAttributes(UA_VariableNode *node,
                              const UA_VariableAttributes *attr) {
-    /* Copy the array dimensions */
+    
     UA_StatusCode retval =
         UA_Array_copy(attr->arrayDimensions, attr->arrayDimensionsSize,
                       (void**)&node->arrayDimensions, &UA_TYPES[UA_TYPES_UINT32]);
@@ -755,13 +734,13 @@ copyCommonVariableAttributes(UA_VariableNode *node,
         return retval;
     node->arrayDimensionsSize = attr->arrayDimensionsSize;
 
-    /* Data type and value rank */
+    
     retval = UA_NodeId_copy(&attr->dataType, &node->dataType);
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
     node->valueRank = attr->valueRank;
 
-    /* Copy the value */
+    
     retval = UA_Variant_copy(&attr->value, &node->value.data.value.value);
     node->valueSource = UA_VALUESOURCE_DATA;
     node->value.data.value.hasValue = (node->value.data.value.value.type != NULL);
@@ -836,7 +815,7 @@ copyMethodNodeAttributes(UA_MethodNode *mnode,
 
 UA_StatusCode
 UA_Node_setAttributes(UA_Node *node, const void *attributes, const UA_DataType *attributeType) {
-    /* Copy the attributes into the node */
+    
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     switch(node->head.nodeClass) {
     case UA_NODECLASS_OBJECT:
@@ -889,9 +868,9 @@ UA_Node_setAttributes(UA_Node *node, const void *attributes, const UA_DataType *
     return retval;
 }
 
-/*********************/
-/* Manage References */
-/*********************/
+
+
+
 
 static UA_StatusCode
 addReferenceTargetToTree(UA_NodeReferenceKind *rk, UA_NodePointer targetId,
@@ -922,14 +901,14 @@ addReferenceTargetToTree(UA_NodeReferenceKind *rk, UA_NodePointer targetId,
 static UA_StatusCode
 addReferenceTarget(UA_NodeReferenceKind *rk, UA_NodePointer targetId,
                    UA_UInt32 targetNameHash) {
-    /* Insert into tree */
+    
     if(rk->hasRefTree) {
         UA_ExpandedNodeId en = UA_NodePointer_toExpandedNodeId(targetId);
         return addReferenceTargetToTree(rk, targetId, UA_ExpandedNodeId_hash(&en),
                                         targetNameHash);
     }
 
-    /* Insert to the array */
+    
     UA_ReferenceTarget *newRefs = (UA_ReferenceTarget*)
         UA_realloc(rk->targets.array,
                    sizeof(UA_ReferenceTarget) * (rk->targetsSize + 1));
@@ -984,30 +963,30 @@ UA_StatusCode
 UA_Node_addReference(UA_Node *node, UA_Byte refTypeIndex, UA_Boolean isForward,
                      const UA_ExpandedNodeId *targetNodeId,
                      UA_UInt32 targetBrowseNameHash) {
-    /* Find the matching reference kind */
+    
     for(size_t i = 0; i < node->head.referencesSize; ++i) {
         UA_NodeReferenceKind *refs = &node->head.references[i];
 
-        /* Reference direction does not match */
+        
         if(refs->isInverse == isForward)
             continue;
 
-        /* Reference type does not match */
+        
         if(refs->referenceTypeIndex != refTypeIndex)
             continue;
 
-        /* Does an identical reference already exist? */
+        
         const UA_ReferenceTarget *found =
             UA_NodeReferenceKind_findTarget(refs, targetNodeId);
         if(found)
             return UA_STATUSCODE_BADDUPLICATEREFERENCENOTALLOWED;
 
-        /* Add to existing ReferenceKind */
+        
         return addReferenceTarget(refs, UA_NodePointer_fromExpandedNodeId(targetNodeId),
                                   targetBrowseNameHash);
     }
 
-    /* Add new ReferenceKind for the target */
+    
     return addReferenceKind(&node->head, refTypeIndex, isForward,
                             UA_NodePointer_fromExpandedNodeId(targetNodeId),
                             targetBrowseNameHash);
@@ -1025,20 +1004,20 @@ UA_Node_deleteReference(UA_Node *node, UA_Byte refTypeIndex, UA_Boolean isForwar
         if(refTypeIndex != refs->referenceTypeIndex)
             continue;
 
-        /* Cast out the const qualifier (hack!) */
+        
         UA_ReferenceTarget *target = (UA_ReferenceTarget*)(uintptr_t)
             UA_NodeReferenceKind_findTarget(refs, targetNodeId);
         if(!target)
             continue;
 
-        /* Ok, delete the reference. Cannot fail */
+        
         refs->targetsSize--;
 
         if(!refs->hasRefTree) {
-            /* Remove from array */
+            
             UA_NodePointer_clear(&target->targetId);
 
-            /* Elements remaining. Realloc. */
+            
             if(refs->targetsSize > 0) {
                 if(target != &refs->targets.array[refs->targetsSize])
                     *target = refs->targets.array[refs->targetsSize];
@@ -1047,10 +1026,10 @@ UA_Node_deleteReference(UA_Node *node, UA_Byte refTypeIndex, UA_Boolean isForwar
                                sizeof(UA_ReferenceTarget) * refs->targetsSize);
                 if(newRefs)
                     refs->targets.array = newRefs;
-                return UA_STATUSCODE_GOOD; /* Realloc allowed to fail */
+                return UA_STATUSCODE_GOOD; 
             }
 
-            /* Remove the last target. Remove the ReferenceKind below */
+            
             UA_free(refs->targets.array);
         } else {
             UA_ReferenceTargetTreeElem *elem = (UA_ReferenceTargetTreeElem*)target;
@@ -1064,12 +1043,9 @@ UA_Node_deleteReference(UA_Node *node, UA_Byte refTypeIndex, UA_Boolean isForwar
                 return UA_STATUSCODE_GOOD;
         }
 
-        /* No targets remaining. Remove the ReferenceKind. */
+        
         head->referencesSize--;
         if(head->referencesSize > 0) {
-            /* No target for the ReferenceType remaining. Remove and shrink down
-             * allocated buffer. Ignore errors in case memory buffer could not
-             * be shrinked down. */
             if(i != head->referencesSize)
                 head->references[i] = head->references[node->head.referencesSize];
             UA_NodeReferenceKind *newRefs = (UA_NodeReferenceKind*)
@@ -1078,7 +1054,7 @@ UA_Node_deleteReference(UA_Node *node, UA_Byte refTypeIndex, UA_Boolean isForwar
             if(newRefs)
                 head->references = newRefs;
         } else {
-            /* No remaining references of any ReferenceType */
+            
             UA_free(head->references);
             head->references = NULL;
         }
@@ -1091,13 +1067,11 @@ void
 UA_Node_deleteReferencesSubset(UA_Node *node, const UA_ReferenceTypeSet *keepSet) {
     UA_NodeHead *head = &node->head;
     for(size_t i = 0; i < head->referencesSize; i++) {
-        /* Keep the references of this type? */
+        
         UA_NodeReferenceKind *refs = &head->references[i];
         if(UA_ReferenceTypeSet_contains(keepSet, refs->referenceTypeIndex))
             continue;
 
-        /* Remove all target entries. Don't remove entries from browseName tree.
-         * The entire ReferenceKind will be removed anyway. */
         if(!refs->hasRefTree) {
             for(size_t j = 0; j < refs->targetsSize; j++)
                 UA_NodePointer_clear(&refs->targets.array[j].targetId);
@@ -1108,8 +1082,6 @@ UA_Node_deleteReferencesSubset(UA_Node *node, const UA_ReferenceTypeSet *keepSet
                      removeTreeEntry, NULL);
         }
 
-        /* Move last references-kind entry to this position. Don't memcpy over
-         * the same position. Decrease i to repeat at this location. */
         head->referencesSize--;
         if(i != head->referencesSize) {
             head->references[i] = head->references[head->referencesSize];
@@ -1118,14 +1090,14 @@ UA_Node_deleteReferencesSubset(UA_Node *node, const UA_ReferenceTypeSet *keepSet
     }
 
     if(head->referencesSize > 0) {
-        /* Realloc to save memory. Ignore if realloc fails. */
+        
         UA_NodeReferenceKind *refs = (UA_NodeReferenceKind*)
             UA_realloc(head->references,
                        sizeof(UA_NodeReferenceKind) * head->referencesSize);
         if(refs)
             head->references = refs;
     } else {
-        /* The array is empty. Remove. */
+        
         UA_free(head->references);
         head->references = NULL;
     }
@@ -1146,7 +1118,7 @@ UA_Node_insertOrUpdateLocale(UA_LocalizedTextListEntry **root,
         if(!UA_String_equal(&value->locale, &lt->localizedText.locale))
             continue;
 
-        /* No text -> remove the entry for this locale */
+        
         if(value->text.length == 0) {
             if(prev == NULL)
                 *root = lt->next;
@@ -1157,8 +1129,6 @@ UA_Node_insertOrUpdateLocale(UA_LocalizedTextListEntry **root,
             return UA_STATUSCODE_GOOD;
         }
 
-        /* First make a copy of the text, if this succeeds replace the old
-         * version */
         UA_String tmp;
         res = UA_String_copy(&value->text, &tmp);
         if(res != UA_STATUSCODE_GOOD)
@@ -1169,13 +1139,13 @@ UA_Node_insertOrUpdateLocale(UA_LocalizedTextListEntry **root,
         return UA_STATUSCODE_GOOD;
     }
 
-    /* The locale does not exist so far */
+    
 
-    /* Do nothing if a non-existing locale should be removed */
+    
     if(value->text.length == 0)
         return UA_STATUSCODE_GOOD;
 
-    /* Add a new localized text */
+    
     lt = (UA_LocalizedTextListEntry *)UA_malloc(sizeof(UA_LocalizedTextListEntry));
     if(!lt)
         return UA_STATUSCODE_BADOUTOFMEMORY;

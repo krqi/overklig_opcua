@@ -1,12 +1,5 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2018 (c) basysKom GmbH <opensource@basyskom.com> (Author: Peter Rustler)
- *    Copyright 2021 (c) luibass92 <luibass92@live.it> (Author: Luigi Bassetta)
- */
 
-#include <open62541/plugin/historydata/history_data_backend_memory.h>
+#include <opcua/plugin/historydata/history_data_backend_memory.h>
 
 #include <limits.h>
 #include <string.h>
@@ -27,7 +20,7 @@ typedef struct {
     UA_DataValueMemoryStoreItem **dataStore;
     size_t storeEnd;
     size_t storeSize;
-    /* New field useful for circular buffer management */
+    
     size_t lastInserted;
 } UA_NodeIdStoreContextItem_backend_memory;
 
@@ -620,7 +613,7 @@ UA_HistoryDataBackend_Memory_clear(UA_HistoryDataBackend *backend)
     memset(backend, 0, sizeof(UA_HistoryDataBackend));
 }
 
-/* Circular buffer implementation */
+
 
 static UA_NodeIdStoreContextItem_backend_memory *
 getNewNodeIdContext_backend_memory_Circular(UA_MemoryStoreContext *context,
@@ -669,7 +662,7 @@ serverSetHistoryData_backend_memory_Circular(UA_Server *server,
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
     if(item->lastInserted >= item->storeSize) {
-        /* If the buffer size is overcomed, push new elements from the start of the buffer */
+        
         item->lastInserted = 0;
     }
     UA_DateTime timestamp = 0;
@@ -689,7 +682,7 @@ serverSetHistoryData_backend_memory_Circular(UA_Server *server,
     }
 
 
-    /* This implementation does NOT sort values by timestamp */
+    
 
     if(item->dataStore[item->lastInserted] != NULL) {
         UA_DataValueMemoryStoreItem_clear(item->dataStore[item->lastInserted]);

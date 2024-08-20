@@ -1,15 +1,7 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2018 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2019 (c) Kalycito Infotech Private Limited
- *    Copyright 2019 (c) Julius Pfrommer, Fraunhofer IOSB
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-#include <open62541/util.h>
-#include <open62541/plugin/certificategroup_default.h>
-#include <open62541/plugin/log_stdout.h>
+#include <opcua/util.h>
+#include <opcua/plugin/certificategroup_default.h>
+#include <opcua/plugin/log_stdout.h>
 
 #ifdef UA_ENABLE_ENCRYPTION_MBEDTLS
 
@@ -25,7 +17,7 @@
 #define DUALPARENT               3
 #define PARENTFOUND              4
 
-/* Configuration parameters */
+
 
 #define MEMORYCERTSTORE_PARAMETERSSIZE 2
 #define MEMORYCERTSTORE_PARAMINDEX_MAXTRUSTLISTSIZE 0
@@ -61,7 +53,7 @@ struct MemoryCertStore {
 
 static UA_StatusCode
 MemoryCertStore_removeFromTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -73,7 +65,7 @@ MemoryCertStore_removeFromTrustList(UA_CertificateGroup *certGroup, const UA_Tru
 
 static UA_StatusCode
 MemoryCertStore_getTrustList(UA_CertificateGroup *certGroup, UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -84,7 +76,7 @@ MemoryCertStore_getTrustList(UA_CertificateGroup *certGroup, UA_TrustListDataTyp
 
 static UA_StatusCode
 MemoryCertStore_setTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -100,7 +92,7 @@ MemoryCertStore_setTrustList(UA_CertificateGroup *certGroup, const UA_TrustListD
 
 static UA_StatusCode
 MemoryCertStore_addToTrustList(UA_CertificateGroup *certGroup, const UA_TrustListDataType *trustList) {
-    /* Check parameter */
+    
     if(certGroup == NULL || trustList == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -115,7 +107,7 @@ MemoryCertStore_addToTrustList(UA_CertificateGroup *certGroup, const UA_TrustLis
 
 static UA_StatusCode
 MemoryCertStore_getRejectedList(UA_CertificateGroup *certGroup, UA_ByteString **rejectedList, size_t *rejectedListSize) {
-    /* Check parameter */
+    
     if(certGroup == NULL || rejectedList == NULL || rejectedListSize == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -132,20 +124,20 @@ MemoryCertStore_getRejectedList(UA_CertificateGroup *certGroup, UA_ByteString **
 
 static UA_StatusCode
 MemoryCertStore_addToRejectedList(UA_CertificateGroup *certGroup, const UA_ByteString *certificate) {
-    /* Check parameter */
+    
     if(certGroup == NULL || certificate == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
     MemoryCertStore *context = (MemoryCertStore *)certGroup->context;
 
-    /* check duplicate certificate */
+    
     for(size_t i = 0; i < context->rejectedCertificatesSize; i++) {
         if(UA_ByteString_equal(certificate, &context->rejectedCertificates[i]))
-            return UA_STATUSCODE_GOOD; /* certificate already exist */
+            return UA_STATUSCODE_GOOD; 
     }
 
-    /* Store rejected certificate */
+    
     if(context->maxRejectedListSize == 0 || context->rejectedCertificatesSize < context->maxRejectedListSize) {
         return UA_Array_appendCopy((void**)&context->rejectedCertificates, &context->rejectedCertificatesSize,
                                    certificate, &UA_TYPES[UA_TYPES_BYTESTRING]);
@@ -159,7 +151,7 @@ MemoryCertStore_addToRejectedList(UA_CertificateGroup *certGroup, const UA_ByteS
 
 static void
 MemoryCertStore_clear(UA_CertificateGroup *certGroup) {
-    /* check parameter */
+    
     if(certGroup == NULL) {
         return;
     }
@@ -186,7 +178,7 @@ MemoryCertStore_clear(UA_CertificateGroup *certGroup) {
 
 static UA_StatusCode
 reloadCertificates(UA_CertificateGroup *certGroup) {
-    /* Check parameter */
+    
     if(certGroup == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -241,7 +233,7 @@ reloadCertificates(UA_CertificateGroup *certGroup) {
 
 static UA_StatusCode
 verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certificate) {
-    /* Check parameter */
+    
     if (certGroup == NULL || certGroup->context == NULL) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
@@ -256,7 +248,7 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
     }
 
 
-    /* Accept the certificate if the store is empty */
+    
     if(context->trustedCertificates.raw.len == 0 &&
        context->issuerCertificates.raw.len == 0 &&
        context->trustedCrls.raw.len == 0 &&
@@ -266,25 +258,25 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
         return UA_STATUSCODE_GOOD;
     }
 
-    /* Parse the certificate */
+    
     mbedtls_x509_crt remoteCertificate;
 
-    /* Temporary Object to parse the trustList */
+    
     mbedtls_x509_crt *tempCert = NULL;
 
-    /* Temporary Object to parse the revocationList */
+    
     mbedtls_x509_crl *tempCrl = NULL;
 
-    /* Temporary Object to identify the parent CA when there is no intermediate CA */
+    
     mbedtls_x509_crt *parentCert = NULL;
 
-    /* Temporary Object to identify the parent CA when there is intermediate CA */
+    
     mbedtls_x509_crt *parentCert_2 = NULL;
 
-    /* Flag value to identify if the issuer certificate is found */
+    
     int issuerKnown = 0;
 
-    /* Flag value to identify if the parent certificate found */
+    
     int parentFound = 0;
 
     mbedtls_x509_crt_init(&remoteCertificate);
@@ -294,7 +286,7 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
     }
 
-    /* Verify */
+    
     mbedtls_x509_crt_profile crtProfile = {
             MBEDTLS_X509_ID_FLAG(MBEDTLS_MD_SHA1) | MBEDTLS_X509_ID_FLAG(MBEDTLS_MD_SHA256),
             0xFFFFFF, 0x000000, 128 * 8 // in bits
@@ -306,10 +298,10 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
                                                    &context->trustedCrls,
                                                    &crtProfile, NULL, &flags, NULL, NULL);
 
-    /* Flag to check if the remote certificate is trusted or not */
+    
     int TRUSTED = 0;
 
-    /* Check if the remoteCertificate is present in the trustList while mbedErr value is not zero */
+    
     if(mbedErr && !(flags & MBEDTLS_X509_BADCERT_EXPIRED) && !(flags & MBEDTLS_X509_BADCERT_FUTURE)) {
         for(tempCert = &context->trustedCertificates; tempCert != NULL; tempCert = tempCert->next) {
             if(remoteCertificate.raw.len == tempCert->raw.len &&
@@ -320,20 +312,18 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
         }
     }
 
-    /* If the remote certificate is present in the trustList then check if the issuer certificate
-     * of remoteCertificate is present in issuerList */
     if(TRUSTED && mbedErr) {
         mbedErr = mbedtls_x509_crt_verify_with_profile(&remoteCertificate,
                                                        &context->issuerCertificates,
                                                        &context->issuerCrls,
                                                        &crtProfile, NULL, &flags, NULL, NULL);
 
-        /* Check if the parent certificate has a CRL file available */
+        
         if(!mbedErr) {
-            /* Flag value to identify if that there is an intermediate CA present */
+            
             int dualParent = 0;
 
-            /* Identify the topmost parent certificate for the remoteCertificate */
+            
             for(parentCert = &context->issuerCertificates; parentCert != NULL; parentCert = parentCert->next ) {
                 if(memcmp(remoteCertificate.issuer_raw.p, parentCert->subject_raw.p, parentCert->subject_raw.len) == 0) {
                     for(parentCert_2 = &context->trustedCertificates; parentCert_2 != NULL; parentCert_2 = parentCert_2->next) {
@@ -349,16 +339,10 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
                     break;
             }
 
-            /* Check if there is an intermediate certificate between the topmost parent
-             * certificate and child certificate
-             * If yes the topmost parent certificate is to be checked whether it has a
-             * CRL file avaiable */
             if(dualParent == DUALPARENT && parentFound == PARENTFOUND) {
                 parentCert = parentCert_2;
             }
 
-            /* If a parent certificate is found traverse the revocationList and identify
-             * if there is any CRL file that corresponds to the parentCertificate */
             if(parentFound == PARENTFOUND) {
                 tempCrl = &context->issuerCrls;
                 while(tempCrl != NULL) {
@@ -374,8 +358,6 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
                     tempCrl = tempCrl->next;
                 }
 
-                /* If the CRL file corresponding to the parent certificate is not present
-                 * then return UA_STATUSCODE_BADCERTIFICATEISSUERREVOCATIONUNKNOWN */
                 if(!issuerKnown) {
                     return UA_STATUSCODE_BADCERTIFICATEISSUERREVOCATIONUNKNOWN;
                 }
@@ -383,10 +365,8 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
         }
     }
     else if(!mbedErr && !TRUSTED) {
-        /* This else if section is to identify if the parent certificate which is present in trustList
-         * has CRL file corresponding to it */
 
-        /* Identify the parent certificate of the remoteCertificate */
+        
         for(parentCert = &context->trustedCertificates; parentCert != NULL; parentCert = parentCert->next) {
             if(memcmp(remoteCertificate.issuer_raw.p, parentCert->subject_raw.p, parentCert->subject_raw.len) == 0) {
                 parentFound = PARENTFOUND;
@@ -394,8 +374,6 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
             }
         }
 
-        /* If the parent certificate is found traverse the revocationList and identify
-         * if there is any CRL file that corresponds to the parentCertificate */
         if(parentFound == PARENTFOUND &&
            memcmp(remoteCertificate.issuer_raw.p, remoteCertificate.subject_raw.p, remoteCertificate.subject_raw.len) != 0) {
             tempCrl = &context->trustedCrls;
@@ -412,8 +390,6 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
                 tempCrl = tempCrl->next;
             }
 
-            /* If the CRL file corresponding to the parent certificate is not present
-             * then return UA_STATUSCODE_BADCERTIFICATEREVOCATIONUNKNOWN */
             if(!issuerKnown) {
                 return UA_STATUSCODE_BADCERTIFICATEREVOCATIONUNKNOWN;
             }
@@ -424,12 +400,6 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
 
     // TODO: Extend verification
 
-    /* This condition will check whether the certificate is a User certificate
-     * or a CA certificate. If the MBEDTLS_X509_KU_KEY_CERT_SIGN and
-     * MBEDTLS_X509_KU_CRL_SIGN of key_usage are set, then the certificate
-     * shall be condidered as CA Certificate and cannot be used to establish a
-     * connection. Refer the test case CTT/Security/Security Certificate Validation/029.js
-     * for more details */
 #if MBEDTLS_VERSION_NUMBER >= 0x02060000 && MBEDTLS_VERSION_NUMBER < 0x03000000
     if((remoteCertificate.key_usage & MBEDTLS_X509_KU_KEY_CERT_SIGN) &&
        (remoteCertificate.key_usage & MBEDTLS_X509_KU_CRL_SIGN)) {
@@ -470,7 +440,7 @@ verifyCertificate(UA_CertificateGroup *certGroup, const UA_ByteString *certifica
 static UA_StatusCode
 MemoryCertStore_verifyCertificate(UA_CertificateGroup *certGroup,
                                   const UA_ByteString *certificate) {
-    /* Check parameter */
+    
     if(certGroup == NULL || certificate == NULL) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
@@ -501,7 +471,7 @@ UA_CertificateGroup_Memorystore(UA_CertificateGroup *certGroup,
 
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
-    /* Clear if the plugin is already initialized */
+    
     if(certGroup->clear)
         certGroup->clear(certGroup);
 
@@ -516,14 +486,14 @@ UA_CertificateGroup_Memorystore(UA_CertificateGroup *certGroup,
     certGroup->verifyCertificate = MemoryCertStore_verifyCertificate;
     certGroup->clear = MemoryCertStore_clear;
 
-    /* Set PKI Store context data */
+    
     MemoryCertStore *context = (MemoryCertStore *)UA_calloc(1, sizeof(MemoryCertStore));
     if(!context) {
         retval = UA_STATUSCODE_BADOUTOFMEMORY;
         goto cleanup;
     }
     certGroup->context = context;
-    /* Default values */
+    
     context->maxTrustListSize = 65535;
     context->maxRejectedListSize = 100;
 
@@ -555,12 +525,10 @@ cleanup:
     return retval;
 }
 
-/* Find binary substring. Taken and adjusted from
- * http://tungchingkai.blogspot.com/2011/07/binary-strstr.html */
 
 static const unsigned char *
 bstrchr(const unsigned char *s, const unsigned char ch, size_t l) {
-    /* find first occurrence of c in char s[] for length l*/
+    
     for(; l > 0; ++s, --l) {
         if(*s == ch)
             return s;
@@ -570,20 +538,20 @@ bstrchr(const unsigned char *s, const unsigned char ch, size_t l) {
 
 static const unsigned char *
 UA_Bstrstr(const unsigned char *s1, size_t l1, const unsigned char *s2, size_t l2) {
-    /* find first occurrence of s2[] in s1[] for length l1*/
+    
     const unsigned char *ss1 = s1;
     const unsigned char *ss2 = s2;
-    /* handle special case */
+    
     if(l1 == 0)
         return (NULL);
     if(l2 == 0)
         return s1;
 
-    /* match prefix */
+    
     for (; (s1 = bstrchr(s1, *s2, (uintptr_t)ss1-(uintptr_t)s1+(uintptr_t)l1)) != NULL &&
            (uintptr_t)ss1-(uintptr_t)s1+(uintptr_t)l1 != 0; ++s1) {
 
-        /* match rest of prefix */
+        
         const unsigned char *sc1, *sc2;
         for (sc1 = s1, sc2 = s2; ;)
             if (++sc2 >= ss2+l2)
@@ -598,7 +566,7 @@ UA_StatusCode
 UA_CertificateUtils_verifyApplicationURI(UA_RuleHandling ruleHandling,
                                          const UA_ByteString *certificate,
                                          const UA_String *applicationURI) {
-    /* Parse the certificate */
+    
     mbedtls_x509_crt remoteCertificate;
     mbedtls_x509_crt_init(&remoteCertificate);
     int mbedErr = mbedtls_x509_crt_parse(&remoteCertificate, certificate->data,
@@ -606,11 +574,6 @@ UA_CertificateUtils_verifyApplicationURI(UA_RuleHandling ruleHandling,
     if(mbedErr)
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
 
-    /* Poor man's ApplicationUri verification. mbedTLS does not parse all fields
-     * of the Alternative Subject Name. Instead test whether the URI-string is
-     * present in the v3_ext field in general.
-     *
-     * TODO: Improve parsing of the Alternative Subject Name */
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     if(UA_Bstrstr(remoteCertificate.v3_ext.p, remoteCertificate.v3_ext.len,
                   applicationURI->data, applicationURI->length) == NULL)
@@ -682,7 +645,7 @@ UA_CertificateUtils_getThumbprint(UA_ByteString *certificate,
     thumb.length = (UA_SHA1_LENGTH * 2) + 1;
     thumb.data = (UA_Byte*)malloc(sizeof(UA_Byte)*thumb.length);
 
-    /* Create a string containing a hex representation */
+    
     char *p = (char*)thumb.data;
     for (size_t i = 0; i < thumbpr.length; i++) {
         p += sprintf(p, "%.2X", thumbpr.data[i]);
@@ -731,16 +694,16 @@ UA_CertificateUtils_decryptPrivateKey(const UA_ByteString privateKey,
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
-    /* Already in DER format -> return verbatim */
+    
     if(privateKey.length > 1 && privateKey.data[0] == 0x30 && privateKey.data[1] == 0x82)
         return UA_ByteString_copy(&privateKey, outDerKey);
 
-    /* Create a null-terminated string */
+    
     UA_ByteString nullTerminatedKey = UA_mbedTLS_CopyDataFormatAware(&privateKey);
     if(nullTerminatedKey.length != privateKey.length + 1)
         return UA_STATUSCODE_BADOUTOFMEMORY;
 
-    /* Create the private-key context */
+    
     mbedtls_pk_context ctx;
     mbedtls_pk_init(&ctx);
 #if MBEDTLS_VERSION_NUMBER >= 0x02060000 && MBEDTLS_VERSION_NUMBER < 0x03000000
@@ -762,18 +725,18 @@ UA_CertificateUtils_decryptPrivateKey(const UA_ByteString privateKey,
         return UA_STATUSCODE_BADSECURITYCHECKSFAILED;
     }
 
-    /* Write the DER-encoded key into a local buffer */
+    
     unsigned char buf[1 << 14];
     size_t pos = (size_t)mbedtls_pk_write_key_der(&ctx, buf, sizeof(buf));
 
-    /* Allocate memory */
+    
     UA_StatusCode res = UA_ByteString_allocBuffer(outDerKey, pos);
     if(res != UA_STATUSCODE_GOOD) {
         mbedtls_pk_free(&ctx);
         return res;
     }
 
-    /* Copy to the output */
+    
     memcpy(outDerKey->data, &buf[sizeof(buf) - pos], pos);
     mbedtls_pk_free(&ctx);
     return UA_STATUSCODE_GOOD;

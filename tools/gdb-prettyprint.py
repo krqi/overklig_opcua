@@ -164,8 +164,8 @@ class Variant:
         dims = self.val['arrayDimensions'].cast(dims_type).dereference()
         return "UA_Variant<%s[%i]>(%s, arrayDimensions = %s)" % (tt, array_length, content, dims)
 
-def build_open62541_printer():
-   pp = gdb.printing.RegexpCollectionPrettyPrinter("open62541")
+def build_opcua_printer():
+   pp = gdb.printing.RegexpCollectionPrettyPrinter("opcua")
    pp.add_printer('UA_String', '^UA_String$', String)
    pp.add_printer('UA_ByteString', '^UA_ByteString$', ByteString)
    pp.add_printer('UA_LocalizedText', '^UA_LocalizedText$', LocalizedText)
@@ -178,4 +178,4 @@ def build_open62541_printer():
    return pp
 
 gdb.printing.register_pretty_printer(gdb.current_objfile(),
-                                     build_open62541_printer())
+                                     build_opcua_printer())

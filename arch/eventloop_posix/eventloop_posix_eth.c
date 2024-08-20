@@ -1,23 +1,14 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *   Copyright 2018 (c) Kontron Europe GmbH (Author: Rudolf Hoyler)
- *   Copyright 2019-2020 (c) Kalycito Infotech Private Limited
- *   Copyright 2019-2020 (c) Wind River Systems, Inc.
- *   Copyright 2022 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
 #include "eventloop_posix.h"
 
 #if defined(UA_ARCHITECTURE_POSIX) && defined(__linux__)
 
-#include <arpa/inet.h> /* htons */
-#include <net/ethernet.h> /* ETH_P_*/
+#include <arpa/inet.h> 
+#include <net/ethernet.h> 
 #include <linux/if_packet.h>
-#include <linux/net_tstamp.h> /* txtime */
+#include <linux/net_tstamp.h> 
 
-/* Configuration parameters */
+
 
 #define ETH_MANAGERPARAMS 2
 
@@ -59,7 +50,7 @@ static UA_KeyValueRestriction ethConnectionParams[ETH_PARAMETERSSIZE+1] = {
     {{0, UA_STRING_STATIC("txtime-pico")}, &UA_TYPES[UA_TYPES_UINT16], false, true, false},
     {{0, UA_STRING_STATIC("txtime-drop-late")}, &UA_TYPES[UA_TYPES_BOOLEAN], false, true, false},
     {{0, UA_STRING_STATIC("validate")}, &UA_TYPES[UA_TYPES_BOOLEAN], false, true, false},
-    /* Duplicated address parameter with a scalar value required. For the send-socket case. */
+    
     {{0, UA_STRING_STATIC("address")}, &UA_TYPES[UA_TYPES_STRING], true, true, false},
 };
 
@@ -73,21 +64,13 @@ typedef struct {
     void *context;
 
     struct sockaddr_ll sll;
-    /* The Ethernet header to prepend for sending frames is precomputed and reused.
-     * The length field (the last 2 byte) is adjusted.
-     * - 2 * ETHER_ADDR_LEN: destination and source
-     * - 4 byte: VLAN tagging (optional)
-     * - 2 byte: EtherType (optional)
-     * - 2 byte: length */
     unsigned char header[UA_ETH_MAXHEADERLENGTH];
     unsigned char headerSize;
-    unsigned char lengthOffset; /* No length field if zero */
+    unsigned char lengthOffset; 
 
     UA_Boolean txtimeEnabled;
 } ETH_FD;
 
-/* The format of a Ethernet address is six groups of hexadecimal digits,
- * separated by hyphens (e.g. 01-23-45-67-89-ab). */
 static UA_StatusCode
 parseEthAddress(const UA_String *buf, UA_Byte *addr) {
     size_t curr = 0, idx = 0;
@@ -107,7 +90,7 @@ parseEthAddress(const UA_String *buf, UA_Byte *addr) {
         if(buf->data[curr] != '-')
             return UA_STATUSCODE_BADINTERNALERROR;
 
-        curr++; /* skip '-' */
+        curr++; 
     }
 
     if(idx != (ETH_ALEN-1))
@@ -119,10 +102,10 @@ parseEthAddress(const UA_String *buf, UA_Byte *addr) {
 static UA_Boolean
 isMulticastEthAddress(const UA_Byte *address) {
     if((address[0] & 1) == 0)
-        return false; /* Unicast address */
+        return false; 
     for(size_t i = 0; i < ETHER_ADDR_LEN; i++) {
         if(address[i] != 0xff)
-            return true; /* Not broadcast address ff-ff-ff-ff-ff-ff */
+            return true; 
     }
     return false;
 }
@@ -133,7 +116,7 @@ setAddrString(unsigned char addrStr[18], unsigned char addr[ETHER_ADDR_LEN]) {
                 addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 }
 
-/* Return zero if parsing failed */
+
 static size_t
 parseETHHeader(const UA_ByteString *buf,
                unsigned char destAddr[ETHER_ADDR_LEN],
@@ -143,18 +126,18 @@ parseETHHeader(const UA_ByteString *buf,
     if(buf->length < (2 * ETHER_ADDR_LEN)+2)
         return 0;
 
-    /* Parse "normal" Ethernet header */
+    
     memcpy(destAddr, buf->data, ETHER_ADDR_LEN);
     memcpy(sourceAddr, &buf->data[ETHER_ADDR_LEN], ETHER_ADDR_LEN);
     size_t pos = 2 * ETHER_ADDR_LEN;
     UA_UInt16 length = ntohs(*(UA_UInt16*)&buf->data[pos]);
     pos += 2;
 
-    /* No EtherType and no VLAN */
+    
     if(length <= 1500)
         return pos;
 
-    /* Parse 802.1Q VLAN header */
+    
     if(length == 0x8100) {
         if(buf->length < (2 * ETHER_ADDR_LEN)+2+4)
             return 0;
@@ -167,7 +150,7 @@ parseETHHeader(const UA_ByteString *buf,
         length = ntohs(*(UA_UInt16*)&buf->data[pos]);
     }
 
-    /* Set the EtherType if it is set */
+    
     if(length > 1500)
         *etherType = length;
 
@@ -180,14 +163,14 @@ setETHHeader(unsigned char *buf,
              unsigned char sourceAddr[ETHER_ADDR_LEN],
              UA_UInt16 etherType, UA_UInt16 vid,
              UA_Byte pcp, UA_Boolean dei, unsigned char *lengthOffset) {
-    /* Set dest and source address */
+    
     size_t pos = 0;
     memcpy(buf, destAddr, ETHER_ADDR_LEN);
     pos += ETHER_ADDR_LEN;
     memcpy(&buf[pos], sourceAddr, ETHER_ADDR_LEN);
     pos += ETHER_ADDR_LEN;
 
-    /* Set the 802.1Q VLAN header */
+    
     if(vid > 0 && vid != ETH_P_ALL) {
         *(UA_UInt16*)&buf[pos] = htons(0x8100);
         pos += 2;
@@ -196,7 +179,7 @@ setETHHeader(unsigned char *buf,
         pos += 2;
     }
 
-    /* Set the Ethertype or store the offset for the length field */
+    
     if(etherType == 0 || etherType == ETH_P_ALL) {
         *lengthOffset = (unsigned char)pos;
     } else {
@@ -209,14 +192,14 @@ setETHHeader(unsigned char *buf,
 static UA_StatusCode
 ETH_allocNetworkBuffer(UA_ConnectionManager *cm, uintptr_t connectionId,
                        UA_ByteString *buf, size_t bufSize) {
-    /* Get the ETH_FD */
+    
     UA_POSIXConnectionManager *pcm = (UA_POSIXConnectionManager*)cm;
     UA_FD fd = (UA_FD)connectionId;
     ETH_FD *erfd = (ETH_FD*)ZIP_FIND(UA_FDTree, &pcm->fds, &fd);
     if(!erfd)
         return UA_STATUSCODE_BADCONNECTIONREJECTED;
 
-    /* Allocate the buffer with the hidden Ethernet header in front */
+    
     UA_StatusCode res =
         UA_EventLoopPOSIX_allocNetworkBuffer(cm, connectionId, buf,
                                              bufSize + erfd->headerSize);
@@ -230,20 +213,20 @@ ETH_allocNetworkBuffer(UA_ConnectionManager *cm, uintptr_t connectionId,
 static void
 ETH_freeNetworkBuffer(UA_ConnectionManager *cm, uintptr_t connectionId,
                       UA_ByteString *buf) {
-    /* Get the ETH_FD */
+    
     UA_POSIXConnectionManager *pcm = (UA_POSIXConnectionManager*)cm;
     UA_FD fd = (UA_FD)connectionId;
     ETH_FD *erfd = (ETH_FD*)ZIP_FIND(UA_FDTree, &pcm->fds, &fd);
     if(!erfd)
         return;
 
-    /* Unhide the Ethernet header and free */
+    
     buf->data   -= erfd->headerSize;
     buf->length += erfd->headerSize;
     UA_EventLoopPOSIX_freeNetworkBuffer(cm, connectionId, buf);
 }
 
-/* Test if the ConnectionManager can be stopped */
+
 static void
 ETH_checkStopped(UA_POSIXConnectionManager *pcm) {
     UA_LOCK_ASSERT(&((UA_EventLoopPOSIX*)pcm->cm.eventSource.eventLoop)->elMutex, 1);
@@ -256,9 +239,6 @@ ETH_checkStopped(UA_POSIXConnectionManager *pcm) {
     }
 }
 
-/* This method must not be called from the application directly, but from within
- * the EventLoop. Otherwise we cannot be sure whether the file descriptor is
- * still used after calling close. */
 static void
 ETH_close(UA_POSIXConnectionManager *pcm, ETH_FD *conn) {
     UA_EventLoopPOSIX *el = (UA_EventLoopPOSIX*)pcm->cm.eventSource.eventLoop;
@@ -268,15 +248,15 @@ ETH_close(UA_POSIXConnectionManager *pcm, ETH_FD *conn) {
                  "ETH %u\t| Closing connection",
                  (unsigned)conn->rfd.fd);
 
-    /* Deregister from the EventLoop */
+    
     UA_EventLoopPOSIX_deregisterFD(el, &conn->rfd);
 
-    /* Deregister internally */
+    
     ZIP_REMOVE(UA_FDTree, &pcm->fds, &conn->rfd);
     UA_assert(pcm->fdsSize > 0);
     pcm->fdsSize--;
 
-    /* Signal closing to the application */
+    
     UA_UNLOCK(&el->elMutex);
     conn->applicationCB(&pcm->cm, (uintptr_t)conn->rfd.fd,
                         conn->application, &conn->context,
@@ -284,7 +264,7 @@ ETH_close(UA_POSIXConnectionManager *pcm, ETH_FD *conn) {
                         &UA_KEYVALUEMAP_NULL, UA_BYTESTRING_NULL);
     UA_LOCK(&el->elMutex);
 
-    /* Close the socket */
+    
     int ret = UA_close(conn->rfd.fd);
     if(ret == 0) {
         UA_LOG_INFO(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
@@ -296,11 +276,9 @@ ETH_close(UA_POSIXConnectionManager *pcm, ETH_FD *conn) {
                           (unsigned)conn->rfd.fd, errno_str));
     }
 
-    /* Don't call free here. This might be done automatically via the delayed
-     * callback that calls ETH_close. */
-    /* UA_free(rfd); */
+    
 
-    /* Stop if the ucm is stopping and this was the last open socket */
+    
     ETH_checkStopped(pcm);
 }
 
@@ -318,7 +296,7 @@ ETH_delayedClose(void *application, void *context) {
     UA_free(conn);
 }
 
-/* Gets called when a socket receives data or closes */
+
 static void
 ETH_connectionSocketCallback(UA_ConnectionManager *cm, UA_RegisteredFD *rfd,
                              short event) {
@@ -337,10 +315,10 @@ ETH_connectionSocketCallback(UA_ConnectionManager *cm, UA_RegisteredFD *rfd,
         return;
     }
 
-    /* Use the already allocated receive-buffer */
+    
     UA_ByteString response = pcm->rxBuffer;;
 
-    /* Receive */
+    
 #ifndef _WIN32
     ssize_t ret = UA_recv(rfd->fd, (char*)response.data,
                           response.length, MSG_DONTWAIT);
@@ -349,14 +327,11 @@ ETH_connectionSocketCallback(UA_ConnectionManager *cm, UA_RegisteredFD *rfd,
                       response.length, MSG_DONTWAIT);
 #endif
 
-    /* Receive has failed */
+    
     if(ret <= 0) {
         if(UA_ERRNO == UA_INTERRUPTED)
             return;
 
-        /* Orderly shutdown of the socket. We can immediately close as no method
-         * "below" in the call stack will use the socket in this iteration of
-         * the EventLoop. */
         UA_LOG_SOCKET_ERRNO_WRAP(
            UA_LOG_DEBUG(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
                         "ETH %u\t| recv signaled the socket was shutdown (%s)",
@@ -372,7 +347,7 @@ ETH_connectionSocketCallback(UA_ConnectionManager *cm, UA_RegisteredFD *rfd,
 
     response.length = (size_t)ret;
 
-    /* Parse the Ethernet header */
+    
     unsigned char destAddr[ETHER_ADDR_LEN];
     unsigned char sourceAddr[ETHER_ADDR_LEN];
     UA_UInt16 etherType = 0;
@@ -384,7 +359,7 @@ ETH_connectionSocketCallback(UA_ConnectionManager *cm, UA_RegisteredFD *rfd,
     if(headerSize == 0)
         return;
 
-    /* Set up the parameter arguments passed to the application */
+    
     unsigned char destAddrBytes[18];
     unsigned char sourceAddrBytes[18];
     setAddrString(destAddrBytes, destAddr);
@@ -415,7 +390,7 @@ ETH_connectionSocketCallback(UA_ConnectionManager *cm, UA_RegisteredFD *rfd,
         paramsSize += 3;
     }
 
-    /* Callback to the application layer with the Ethernet header hidden */
+    
     UA_KeyValueMap map = {paramsSize, params};
     response.data += headerSize;
     response.length -= headerSize;
@@ -434,7 +409,7 @@ ETH_openListenConnection(UA_EventLoopPOSIX *el, ETH_FD *conn,
                          UA_Boolean validate) {
     UA_LOCK_ASSERT(&el->elMutex, 1);
 
-    /* Bind the socket to interface and EtherType. Don't receive anything else. */
+    
     struct sockaddr_ll sll;
     memset(&sll, 0, sizeof(struct sockaddr_ll));
     sll.sll_family = AF_PACKET;
@@ -443,11 +418,9 @@ ETH_openListenConnection(UA_EventLoopPOSIX *el, ETH_FD *conn,
     if(!validate && bind(conn->rfd.fd, (struct sockaddr*)&sll, sizeof(sll)) < 0)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Immediately register for listen events. Don't have to wait for a
-     * connection to open. */
     conn->rfd.listenEvents = UA_FDEVENT_IN;
 
-    /* Set receiving to promiscuous (all target host addresses) */
+    
     const UA_Boolean *promiscuous = (const UA_Boolean*)
         UA_KeyValueMap_getScalar(params, ethConnectionParams[ETH_PARAMINDEX_PROMISCUOUS].name,
                                  &UA_TYPES[UA_TYPES_BOOLEAN]);
@@ -471,7 +444,7 @@ ETH_openListenConnection(UA_EventLoopPOSIX *el, ETH_FD *conn,
         }
     }
 
-    /* Register for multicast if an address is defined */
+    
     const UA_String *address = (const UA_String*)
         UA_KeyValueMap_getScalar(params, ethConnectionParams[ETH_PARAMINDEX_ADDR].name,
                                  &UA_TYPES[UA_TYPES_STRING]);
@@ -518,7 +491,7 @@ ETH_openSendConnection(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap
                        UA_Byte source[ETHER_ADDR_LEN], int ifindex, UA_UInt16 etherType) {
     UA_LOCK_ASSERT(&el->elMutex, 1);
 
-    /* Parse the target address (has to exist) */
+    
     const UA_String *address = (const UA_String*)
         UA_KeyValueMap_getScalar(params, ethConnectionParams[ETH_PARAMINDEX_ADDR].name,
                                  &UA_TYPES[UA_TYPES_STRING]);
@@ -531,7 +504,7 @@ ETH_openSendConnection(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap
         return res;
     }
 
-    /* Get the VLAN config */
+    
     UA_UInt16 vid = 0;
     UA_Byte pcp = 0;
     UA_Boolean eid = false;
@@ -554,16 +527,16 @@ ETH_openSendConnection(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap
     if(eidp)
         eid = *eidp;
 
-    /* Store the structure for sendto */
+    
     conn->sll.sll_ifindex = ifindex;
 	conn->sll.sll_halen = ETH_ALEN;
     memcpy(conn->sll.sll_addr, dest, ETHER_ADDR_LEN);
 
-    /* Generate the Ethernet header */
+    
     conn->headerSize = setETHHeader(conn->header, dest, source, etherType,
                                     vid, pcp, eid, &conn->lengthOffset);
 
-    /* Set the send priority if defined */
+    
     const UA_Int32 *soPriority = (const UA_Int32*)
         UA_KeyValueMap_getScalar(params, ethConnectionParams[ETH_PARAMINDEX_PRIORITY].name,
                                  &UA_TYPES[UA_TYPES_INT32]);
@@ -578,7 +551,7 @@ ETH_openSendConnection(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap
         }
     }
 
-    /* Enable txtime sending */
+    
     const UA_Boolean *txtime_enable = (const UA_Boolean*)
         UA_KeyValueMap_getScalar(params,
                                  ethConnectionParams[ETH_PARAMINDEX_TXTIME_ENABLE].name,
@@ -611,7 +584,7 @@ ETH_openSendConnection(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap
 #endif
     }
 
-    /* Done creating the socket */
+    
     UA_LOG_INFO(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
                 "ETH %u\t| Opened an Ethernet send socket",
                 (unsigned)conn->rfd.fd);
@@ -628,16 +601,16 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
 
     UA_LOCK(&el->elMutex);
 
-    /* Listen or send connection? */
+    
     const UA_Boolean *listen = (const UA_Boolean*)
         UA_KeyValueMap_getScalar(params,
                                  ethConnectionParams[ETH_PARAMINDEX_LISTEN].name,
                                  &UA_TYPES[UA_TYPES_BOOLEAN]);
     size_t ethParamRestrictions = ETH_PARAMETERSSIZE;
     if(!listen || !*listen)
-        ethParamRestrictions++; /* Use the last restriction only for send connections */
+        ethParamRestrictions++; 
 
-    /* Validate the parameters */
+    
     UA_StatusCode res =
         UA_KeyValueRestriction_validate(el->eventLoop.logger, "ETH", ethConnectionParams,
                                         ethParamRestrictions, params);
@@ -646,7 +619,7 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
         return res;
     }
 
-    /* Only validate the parameters? */
+    
     UA_Boolean validate = false;
     const UA_Boolean *validateParam = (const UA_Boolean*)
         UA_KeyValueMap_getScalar(params,
@@ -655,7 +628,7 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
     if(validateParam)
         validate = *validateParam;
 
-    /* Get the EtherType parameter */
+    
     UA_UInt16 etherType = ETH_P_ALL;
     const UA_UInt16 *etParam =  (const UA_UInt16*)
         UA_KeyValueMap_getScalar(params,
@@ -664,7 +637,7 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
     if(etParam)
         etherType = *etParam;
 
-    /* Get the interface index */
+    
     const UA_String *interface = (const UA_String*)
         UA_KeyValueMap_getScalar(params,
                                  ethConnectionParams[ETH_PARAMINDEX_IFACE].name,
@@ -684,13 +657,13 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Create the socket and add the basic configuration */
+    
     ETH_FD *conn = NULL;
     UA_FD sockfd;
     if(listen && *listen)
         sockfd = socket(PF_PACKET, SOCK_RAW, htons(etherType));
     else
-        sockfd = socket(PF_PACKET, SOCK_RAW, 0); /* Don't receive */
+        sockfd = socket(PF_PACKET, SOCK_RAW, 0); 
     if(sockfd == -1) {
         UA_LOG_ERROR(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
                      "ETH\t| Could not create a raw Ethernet socket (are you root?)");
@@ -703,7 +676,7 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
     if(res != UA_STATUSCODE_GOOD)
         goto cleanup;
 
-    /* Create the FD object */
+    
     conn = (ETH_FD*)UA_calloc(1, sizeof(ETH_FD));
     if(!conn) {
         res = UA_STATUSCODE_BADOUTOFMEMORY;
@@ -717,9 +690,9 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
     conn->application = application;
     conn->applicationCB = connectionCallback;
 
-    /* Configure a listen or a send connection */
+    
     if(!listen || !*listen) {
-        /* Get the source address for the interface */
+        
         struct ifreq ifr;
         memcpy(ifr.ifr_name, ifname, interface->length);
         ifr.ifr_name[interface->length] = 0;
@@ -739,20 +712,20 @@ ETH_openConnection(UA_ConnectionManager *cm, const UA_KeyValueMap *params,
         res = ETH_openListenConnection(el, conn, params, ifindex, etherType, validate);
     }
 
-    /* Don't actually open or shut down */
+    
     if(validate || res != UA_STATUSCODE_GOOD)
         goto cleanup;
 
-    /* Register in the EventLoop */
+    
     res = UA_EventLoopPOSIX_registerFD(el, &conn->rfd);
     if(res != UA_STATUSCODE_GOOD)
         goto cleanup;
 
-    /* Register locally */
+    
     ZIP_INSERT(UA_FDTree, &pcm->fds, &conn->rfd);
     pcm->fdsSize++;
 
-    /* Register the listen socket in the application */
+    
     UA_UNLOCK(&el->elMutex);
     connectionCallback(cm, (uintptr_t)sockfd, application, &conn->context,
                        UA_CONNECTIONSTATE_ESTABLISHED, &UA_KEYVALUEMAP_NULL,
@@ -779,7 +752,7 @@ ETH_shutdown(UA_POSIXConnectionManager *pcm, ETH_FD *conn) {
         return;
     }
 
-    /* Shutdown the socket to cancel the current select/epoll */
+    
     shutdown(conn->rfd.fd, UA_SHUT_RDWR);
 
     UA_LOG_DEBUG(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
@@ -789,7 +762,7 @@ ETH_shutdown(UA_POSIXConnectionManager *pcm, ETH_FD *conn) {
     dc->application = pcm;
     dc->context = conn;
 
-    /* Don't use the "public" el->addDelayedCallback. It takes a lock. */
+    
     dc->next = el->delayedCallbacks;
     el->delayedCallbacks = dc;
 }
@@ -800,7 +773,7 @@ ETH_shutdownConnection(UA_ConnectionManager *cm, uintptr_t connectionId) {
     UA_POSIXConnectionManager *pcm = (UA_POSIXConnectionManager*)cm;
     UA_LOCK(&el->elMutex);
 
-    /* Get the ETH_FD */
+    
     UA_FD fd = (UA_FD)connectionId;
     UA_RegisteredFD *rfd = ZIP_FIND(UA_FDTree, &pcm->fds, &fd);
     if(!rfd) {
@@ -820,7 +793,7 @@ ETH_shutdownConnection(UA_ConnectionManager *cm, uintptr_t connectionId) {
 static ssize_t
 send_txtime(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap *params,
             UA_DateTime txtime, const char *bytes, size_t bytesSize) {
-    /* Get additiona parameters */
+    
     const UA_UInt16 *txtime_pico = (const UA_UInt16*)
         UA_KeyValueMap_getScalar(params,
                                  ethConnectionParams[ETH_PARAMINDEX_TXTIME_PICO].name,
@@ -839,18 +812,18 @@ send_txtime(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap *params,
 #endif
 
 
-    /* Transform from 100ns since 1601 to ns since the Unix Epoch */
+    
     UA_UInt64 transmission_time = (UA_UInt64)
         (txtime - UA_DATETIME_UNIX_EPOCH) * 100;
     if(txtime_pico)
         transmission_time += (*txtime_pico) / 1000;
 
-    /* Structure for scattering or gathering of input/output */
+    
     struct iovec inputOutputVec;
     inputOutputVec.iov_base = (void*)(uintptr_t)bytes;
     inputOutputVec.iov_len  = bytesSize;
 
-    /* Specify the transmission time in the CMSG. */
+    
     char dataPacket[CMSG_SPACE(sizeof(uint64_t))
 #ifdef SCM_DROP_IF_LATE
                     + CMSG_SPACE(sizeof(uint8_t))
@@ -879,7 +852,7 @@ send_txtime(UA_EventLoopPOSIX *el, ETH_FD *conn, const UA_KeyValueMap *params,
     *((uint8_t*)CMSG_DATA(cmsg)) = (!txtime_drop || *txtime_drop) ? 1: 0;
 #endif
 
-    /* Send */
+    
     return sendmsg(conn->rfd.fd, &message, 0);
 }
 #endif
@@ -892,7 +865,7 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
 
     UA_LOCK(&el->elMutex);
 
-    /* Get the ETH_FD */
+    
     UA_FD fd = (UA_FD)connectionId;
     ETH_FD *conn = (ETH_FD*)ZIP_FIND(UA_FDTree, &pcm->fds, &fd);
     if(!conn) {
@@ -901,7 +874,7 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
         return UA_STATUSCODE_BADCONNECTIONREJECTED;
     }
 
-    /* Uncover and set the Ethernet header */
+    
     buf->data -= conn->headerSize;
     buf->length += conn->headerSize;
     memcpy(buf->data, conn->header, conn->headerSize);
@@ -910,7 +883,7 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
         *ethLength = htons((UA_UInt16)(buf->length - conn->headerSize));
     }
 
-    /* Was a txtime configured? */
+    
     const UA_DateTime *txtime = (const UA_DateTime*)
         UA_KeyValueMap_getScalar(params, ethConnectionParams[ETH_PARAMINDEX_TXTIME].name,
                                  &UA_TYPES[UA_TYPES_DATETIME]);
@@ -923,14 +896,14 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Prevent OS signals when sending to a closed socket */
+    
     int flags = MSG_NOSIGNAL;
 
     struct pollfd tmp_poll_fd;
     tmp_poll_fd.fd = (UA_FD)connectionId;
     tmp_poll_fd.events = UA_POLLOUT;
 
-    /* Send the full buffer. This may require several calls to send */
+    
     size_t nWritten = 0;
     do {
         ssize_t n = 0;
@@ -950,7 +923,7 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
                               flags, (struct sockaddr*)&conn->sll, sizeof(conn->sll));
             }
             if(n < 0) {
-                /* An error we cannot recover from? */
+                
                 if(UA_ERRNO != UA_INTERRUPTED &&
                    UA_ERRNO != UA_WOULDBLOCK &&
                    UA_ERRNO != UA_AGAIN) {
@@ -964,8 +937,6 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
                     return UA_STATUSCODE_BADCONNECTIONCLOSED;
                 }
 
-                /* Poll for the socket resources to become available and retry
-                 * (blocking) */
                 int poll_ret;
                 do {
                     poll_ret = UA_poll(&tmp_poll_fd, 1, 100);
@@ -985,7 +956,7 @@ ETH_sendWithConnection(UA_ConnectionManager *cm, uintptr_t connectionId,
         nWritten += (size_t)n;
     } while(nWritten < buf->length);
 
-    /* Free the buffer */
+    
     UA_UNLOCK(&el->elMutex);
     UA_EventLoopPOSIX_freeNetworkBuffer(cm, connectionId, buf);
     return UA_STATUSCODE_GOOD;
@@ -997,7 +968,7 @@ ETH_eventSourceStart(UA_ConnectionManager *cm) {
     UA_EventLoopPOSIX *el = (UA_EventLoopPOSIX*)cm->eventSource.eventLoop;
     UA_LOCK(&el->elMutex);
 
-    /* Check the state */
+    
     if(cm->eventSource.state != UA_EVENTSOURCESTATE_STOPPED) {
         UA_LOG_ERROR(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
                      "To start the Ethernet ConnectionManager, "
@@ -1006,7 +977,7 @@ ETH_eventSourceStart(UA_ConnectionManager *cm) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    /* Check the parameters */
+    
     UA_StatusCode res =
         UA_KeyValueRestriction_validate(el->eventLoop.logger, "ETH",
                                         ethManagerParams, ETH_MANAGERPARAMS,
@@ -1014,12 +985,12 @@ ETH_eventSourceStart(UA_ConnectionManager *cm) {
     if(res != UA_STATUSCODE_GOOD)
         goto finish;
 
-    /* Allocate the rx buffer */
+    
     res = UA_EventLoopPOSIX_allocateStaticBuffers(pcm);
     if(res != UA_STATUSCODE_GOOD)
         goto finish;
 
-    /* Set the EventSource to the started state */
+    
     cm->eventSource.state = UA_EVENTSOURCESTATE_STARTED;
 
  finish:
@@ -1043,14 +1014,12 @@ ETH_eventSourceStop(UA_ConnectionManager *cm) {
     UA_LOG_INFO(el->eventLoop.logger, UA_LOGCATEGORY_NETWORK,
                 "ETH\t| Shutting down the ConnectionManager");
 
-    /* Prevent new connections to open */
+    
     cm->eventSource.state = UA_EVENTSOURCESTATE_STOPPING;
 
-    /* Shutdown all existing connection */
+    
     ZIP_ITER(UA_FDTree, &pcm->fds, ETH_shutdownCB, cm);
 
-    /* Check if stopped once more (also checking inside ETH_close, but there we
-     * don't check if there is no rfd at all) */
     ETH_checkStopped(pcm);
 
     UA_UNLOCK(&el->elMutex);
@@ -1096,5 +1065,5 @@ UA_ConnectionManager_new_POSIX_Ethernet(const UA_String eventSourceName) {
     return &cm->cm;
 }
 
-#endif /* defined(UA_ARCHITECTURE_POSIX) && defined(__linux__) */
+#endif 
 

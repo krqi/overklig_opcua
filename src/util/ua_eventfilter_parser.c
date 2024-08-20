@@ -1,10 +1,3 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2023-2024 (c) Fraunhofer IOSB (Author: Florian Düwel)
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- */
 
 #include "ua_eventfilter_parser.h"
 
@@ -55,7 +48,7 @@ findOperand(EFParseContext *ctx, char *ref) {
 static Operand *
 resolveOperandRef(EFParseContext *ctx, Operand *op, size_t depth) {
     if(depth > ctx->operandsSize)
-        return NULL; /* prevent infinite recursion */
+        return NULL; 
     if(!op)
         return NULL;
     if(op->type != OT_REF)
@@ -121,8 +114,6 @@ append_operand(Operand *op, Operand *on) {
     optr->childrenSize++;
 }
 
-/* Count the number of elements for the filter. Mark all required elements that
- * appear in the hierarchy from the top element. */
 static size_t
 markPrinted(EFParseContext *ctx, Operand *top, UA_StatusCode *res) {
     top = resolveOperandRef(ctx, top, 0);
@@ -131,9 +122,9 @@ markPrinted(EFParseContext *ctx, Operand *top, UA_StatusCode *res) {
         return 0;
     }
     if(top->type != OT_OPERATOR)
-        return 0; /* Not an element but the operand of an element */
+        return 0; 
     if(top->operand.op.required)
-        return 0; /* already visited */
+        return 0; 
     top->operand.op.required = true;
     size_t count = 1;
     for(size_t i = 0; i < top->operand.op.childrenSize; i++)
@@ -141,8 +132,6 @@ markPrinted(EFParseContext *ctx, Operand *top, UA_StatusCode *res) {
     return count;
 }
 
-/* Return the first printable operator from the list. It must be required and
- * all child-operators must be printed already. */
 static Operator *
 getPrintable(EFParseContext *ctx) {
     Operand *on;
@@ -152,19 +141,17 @@ getPrintable(EFParseContext *ctx) {
 
         Operator *op = &on->operand.op;
         if(!op->required || op->elementIndex > 0)
-            continue; /* Not required or already printed */
+            continue; 
 
-        /* Check all children */
+        
         size_t i = 0;
         for(; i < op->childrenSize; i++) {
             Operand *op_i = resolveOperandRef(ctx, op->children[i], 0);
-            UA_assert(op_i); /* Must resolve. Otherwise markPrinted would have
-                              * found error. */
             if(op_i->type == OT_OPERATOR && op_i->operand.op.elementIndex == 0)
                 break;
         }
         if(i == op->childrenSize)
-            return op; /* All children are ready */
+            return op; 
     }
     return NULL;
 }
@@ -227,7 +214,7 @@ create_filter(EFParseContext *ctx, UA_EventFilter *filter) {
     }
 #endif
 
-    /* Create the select filter */
+    
     Operand *sao;
     UA_StatusCode res = UA_STATUSCODE_GOOD;
     TAILQ_FOREACH(sao, &ctx->select_operands, select_entries) {
@@ -246,9 +233,9 @@ create_filter(EFParseContext *ctx, UA_EventFilter *filter) {
             return res;
     }
 
-    /* Create the where filter */
+    
     if(!ctx->top)
-        return UA_STATUSCODE_GOOD; /* No where clause */
+        return UA_STATUSCODE_GOOD; 
 
     Operand *top = resolveOperandRef(ctx, ctx->top, 0);
     if(!top || top->type != OT_OPERATOR) {
@@ -257,16 +244,16 @@ create_filter(EFParseContext *ctx, UA_EventFilter *filter) {
         return UA_STATUSCODE_BADINTERNALERROR;
     }
 
-    size_t count = markPrinted(ctx, top, &res); /* Count relevant filter elements */
+    size_t count = markPrinted(ctx, top, &res); 
     if(res != UA_STATUSCODE_GOOD)
         return res;
 
-    /* Allocate the elements array */
+    
     filter->whereClause.elements = (UA_ContentFilterElement*)
         UA_Array_new(count, &UA_TYPES[UA_TYPES_CONTENTFILTERELEMENT]);
     filter->whereClause.elementsSize = count;
 
-    /* Get the next printable operator and print it */
+    
     Operator *printable;
     while(count > 0 && (printable = getPrintable(ctx))) {
         count--;
@@ -274,8 +261,6 @@ create_filter(EFParseContext *ctx, UA_EventFilter *filter) {
         printable->elementIndex = count;
     }
 
-    /* Cycles are not allowed. Detected if we could not print all relevant
-     * elements */
     if(count > 0) {
         UA_LOG_ERROR(ctx->logger, UA_LOGCATEGORY_USERLAND,
                      "Cyclic operand references detected");

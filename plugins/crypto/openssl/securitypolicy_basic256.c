@@ -1,13 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2020 (c) Wind River Systems, Inc.
- *    Copyright 2020 (c) basysKom GmbH
- */
 
-#include <open62541/plugin/securitypolicy_default.h>
-#include <open62541/util.h>
+#include <opcua/plugin/securitypolicy_default.h>
+#include <opcua/util.h>
 
 #if defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL)
 
@@ -88,7 +81,7 @@ UA_Policy_Basic256_Clear_Context (UA_SecurityPolicy *policy) {
         return;
     }
 
-    /* delete all allocated members in the context */
+    
 
     EVP_PKEY_free(ctx->localPrivateKey);
     EVP_PKEY_free(ctx->csrLocalPrivateKey);
@@ -119,7 +112,7 @@ updateCertificateAndPrivateKey_sp_basic256(UA_SecurityPolicy *securityPolicy,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* Set the new private key */
+    
     EVP_PKEY_free(pc->localPrivateKey);
 
     pc->localPrivateKey = UA_OpenSSL_LoadPrivateKey(&newPrivateKey);
@@ -154,7 +147,7 @@ createSigningRequest_sp_basic256(UA_SecurityPolicy *securityPolicy,
                                  const UA_KeyValueMap *params,
                                  UA_ByteString *csr,
                                  UA_ByteString *newPrivateKey) {
-    /* Check parameter */
+    
     if (securityPolicy == NULL || csr == NULL) {
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
@@ -170,7 +163,7 @@ createSigningRequest_sp_basic256(UA_SecurityPolicy *securityPolicy,
                                            csr, newPrivateKey);
 }
 
-/* create the channel context */
+
 
 static UA_StatusCode
 UA_ChannelModule_Basic256_New_Context (const UA_SecurityPolicy * securityPolicy,
@@ -200,7 +193,7 @@ UA_ChannelModule_Basic256_New_Context (const UA_SecurityPolicy * securityPolicy,
         return retval;
     }
 
-    /* decode to X509 */
+    
     context->remoteCertificateX509 = UA_OpenSSL_LoadCertificate(&context->remoteCertificate);
     if (context->remoteCertificateX509 == NULL) {
         UA_ByteString_clear (&context->remoteCertificate);
@@ -220,7 +213,7 @@ UA_ChannelModule_Basic256_New_Context (const UA_SecurityPolicy * securityPolicy,
     return UA_STATUSCODE_GOOD;
 }
 
-/* delete the channel context */
+
 
 static void
 UA_ChannelModule_Basic256_Delete_Context (void * channelContext) {
@@ -243,9 +236,6 @@ UA_ChannelModule_Basic256_Delete_Context (void * channelContext) {
     }
 }
 
-/* Compares the supplied certificate with the certificate
- * in the endpoint context
- */
 
 static UA_StatusCode
 UA_Asy_Basic256_compareCertificateThumbprint (const UA_SecurityPolicy * securityPolicy,
@@ -261,7 +251,7 @@ UA_Asy_Basic256_compareCertificateThumbprint (const UA_SecurityPolicy * security
     return UA_STATUSCODE_GOOD;
 }
 
-/* Generates a thumbprint for the specified certificate */
+
 
 static UA_StatusCode
 UA_Asy_Basic256_makeCertificateThumbprint (const UA_SecurityPolicy * securityPolicy,
@@ -500,7 +490,7 @@ UA_Sym_Basic256_generateKey(void *policyContext, const UA_ByteString *secret,
 
 static size_t
 UA_SymEn_Basic256_getLocalKeyLength (const void *              channelContext) {
-    /* 32 bytes 256 bits */
+    
     return UA_SECURITYPOLICY_BASIC256_SYM_ENCRYPTION_KEY_LENGTH;
 }
 
@@ -511,7 +501,7 @@ UA_SymEn_Basic256_getBlockSize (const void *              channelContext) {
 
 static size_t
 UA_SymEn_Basic256_getRemoteKeyLength (const void * channelContext) {
-    /* 32 bytes 256 bits */
+    
     return UA_SECURITYPOLICY_BASIC256_SYM_ENCRYPTION_KEY_LENGTH;
 }
 
@@ -569,7 +559,7 @@ UA_SymSig_Basic256_Sign (void *                    channelContext,
     return UA_OpenSSL_HMAC_SHA1_Sign (message, &cc->localSymSigningKey, signature);
 }
 
-/* the main entry of Basic256 */
+
 
 UA_StatusCode
 UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
@@ -592,7 +582,7 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     policy->certificateTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_RSAMINAPPLICATIONCERTIFICATETYPE);
     policy->securityLevel = 0;
 
-    /* set ChannelModule context  */
+    
 
     channelModule->newContext = UA_ChannelModule_Basic256_New_Context;
     channelModule->deleteContext = UA_ChannelModule_Basic256_Delete_Context;
@@ -610,12 +600,12 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     if (retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* asymmetricModule */
+    
 
     asymmetricModule->compareCertificateThumbprint = UA_Asy_Basic256_compareCertificateThumbprint;
     asymmetricModule->makeCertificateThumbprint = UA_Asy_Basic256_makeCertificateThumbprint;
 
-    /* AsymmetricModule - signature algorithm */
+    
 
     UA_SecurityPolicySignatureAlgorithm * asySigAlgorithm =
         &asymmetricModule->cryptoModule.signatureAlgorithm;
@@ -627,7 +617,7 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     asySigAlgorithm->getLocalKeyLength = NULL;
     asySigAlgorithm->getRemoteKeyLength = NULL;
 
-    /*  AsymmetricModule encryption algorithm */
+    
 
     UA_SecurityPolicyEncryptionAlgorithm * asymEncryAlg =
         &asymmetricModule->cryptoModule.encryptionAlgorithm;
@@ -639,13 +629,13 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     asymEncryAlg->decrypt = UA_AsymEn_Basic256_Decrypt;
     asymEncryAlg->encrypt = UA_AsymEn_Basic256_Encrypt;
 
-    /* SymmetricModule */
+    
 
     symmetricModule->secureChannelNonceLength = 32;
     symmetricModule->generateNonce = UA_Sym_Basic256_generateNonce;
     symmetricModule->generateKey = UA_Sym_Basic256_generateKey;
 
-    /* Symmetric encryption Algorithm */
+    
 
     UA_SecurityPolicyEncryptionAlgorithm * symEncryptionAlgorithm =
         &symmetricModule->cryptoModule.encryptionAlgorithm;
@@ -657,7 +647,7 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     symEncryptionAlgorithm->decrypt = UA_SymEn_Basic256_Decrypt;
     symEncryptionAlgorithm->encrypt = UA_SymEn_Basic256_Encrypt;
 
-    /* Symmetric signature Algorithm */
+    
 
     UA_SecurityPolicySignatureAlgorithm * symSignatureAlgorithm =
         &symmetricModule->cryptoModule.signatureAlgorithm;
@@ -669,7 +659,7 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     symSignatureAlgorithm->verify = UA_SymSig_Basic256_Verify;
     symSignatureAlgorithm->sign = UA_SymSig_Basic256_Sign;
 
-    /* set the policy context */
+    
 
     retval = UA_Policy_Basic256_New_Context (policy, localPrivateKey, logger);
     if (retval != UA_STATUSCODE_GOOD) {
@@ -680,8 +670,6 @@ UA_SecurityPolicy_Basic256 (UA_SecurityPolicy * policy,
     policy->createSigningRequest = createSigningRequest_sp_basic256;
     policy->clear = UA_Policy_Basic256_Clear_Context;
 
-    /* Use the same signature algorithm as the asymmetric component for
-       certificate signing (see standard) */
     policy->certificateSigningAlgorithm = policy->asymmetricModule.cryptoModule.signatureAlgorithm;
 
     return UA_STATUSCODE_GOOD;

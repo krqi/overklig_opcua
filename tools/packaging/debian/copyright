@@ -1,17 +1,17 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: open62541
-Upstream-Contact: open62541 Team <open62541-core@googlegroups.com>
-Source: https://open62541.org/
+Upstream-Name: opcua
+Upstream-Contact: opcua Team <opcua-core@googlegroups.com>
+Source: https://opcua.org/
 
 Files: *
-Copyright: 2019, open62541 Team <open62541-core@googlegroups.com>
+Copyright: 2019, opcua Team <opcua-core@googlegroups.com>
 License: MPL-2.0
 
 Files: deps/ziptree.*
 Copyright: 2018, 2021-2022 Julius Pfrommer
 License: MPL-2.0
 
-Files: deps/open62541_queue.h
+Files: deps/opcua_queue.h
 Copyright: 1991, 1993, The Regents of the University of California.
 License: BSD-3-Clause
 

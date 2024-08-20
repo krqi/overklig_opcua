@@ -37,7 +37,7 @@ version_label = m.group(4) if m.group(4) is not None else ""
 #print("major {} minor {} patch {} label {}".format(version_major, version_minor, version_patch, version_label))
 
 # We can not use unstable for now, because dpkg-buildpackage wants to sign them
-# It will fail with gpg: skipped "open62541 Team <open62541-core@googlegroups.com>": No secret key
+# It will fail with gpg: skipped "opcua Team <opcua-core@googlegroups.com>": No secret key
 #debian_distribution = "unstable"
 #if version_label is not "":
 debian_distribution = "UNRELEASED"
@@ -50,19 +50,19 @@ changelog_version = git_describe_version[1:] if git_describe_version[0] == 'v' e
 changelog_version = changelog_version.replace('-', '~')
 
 # prefix the version string with the current ISO datetime to ensure correct version ordering.
-# See https://github.com/open62541/open62541/issues/3140
+# See https://github.com/opcua/opcua/issues/3140
 changelog_version = datetime.datetime.utcnow().replace(microsecond=0).isoformat().replace('-', '').replace(':', '') + '~' + changelog_version
 
 # Create an updated changelog file with the version information
 with open(changelog_file) as original:
     data = original.read()
 with open(os.path.join(target_debian_path, "changelog"), 'w') as modified:
-    new_entry = """open62541 ({version}) {distribution}; urgency=medium
+    new_entry = """opcua ({version}) {distribution}; urgency=medium
 
   * Full changelog is available here:
-    https://github.com/open62541/open62541/blob/master/CHANGELOG
+    https://github.com/opcua/opcua/blob/master/CHANGELOG
 
- -- open62541 Team <open62541-core@googlegroups.com>  {time}
+ -- opcua Team <opcua-core@googlegroups.com>  {time}
 """.format(version=changelog_version, time=formatdate(), distribution = debian_distribution)
 
     modified.write(new_entry + "\n" + data)
@@ -78,16 +78,16 @@ with open(control_file, 'r+') as f:
     f.write(content.replace('<soname>', f"{version_major}.{version_minor}"))
 
 # rename the install template to match the soname
-install_file_template = os.path.join(debian_path, "libopen62541.install-template")
-install_file = os.path.join(target_debian_path, f"libopen62541-{version_major}.{version_minor}.install")
+install_file_template = os.path.join(debian_path, "libopcua.install-template")
+install_file = os.path.join(target_debian_path, f"libopcua-{version_major}.{version_minor}.install")
 shutil.copy(install_file_template, install_file)
 
-install_file_template = os.path.join(debian_path, "libopen62541-dev.install-template")
-install_file = os.path.join(target_debian_path, f"libopen62541-{version_major}.{version_minor}-dev.install")
+install_file_template = os.path.join(debian_path, "libopcua-dev.install-template")
+install_file = os.path.join(target_debian_path, f"libopcua-{version_major}.{version_minor}-dev.install")
 shutil.copy(install_file_template, install_file)
 
-install_file_template = os.path.join(debian_path, "libopen62541-tools.install-template")
-install_file = os.path.join(target_debian_path, f"libopen62541-{version_major}.{version_minor}-tools.install")
+install_file_template = os.path.join(debian_path, "libopcua-tools.install-template")
+install_file = os.path.join(target_debian_path, f"libopcua-{version_major}.{version_minor}-tools.install")
 shutil.copy(install_file_template, install_file)
 
 # Update CMakeLists.txt to include full version string
@@ -97,5 +97,5 @@ with open(os.path.join(dirpath,"CMakeLists.txt"), 'r+') as f:
     f.truncate()
     for idx, line in enumerate(lines):
         if idx == 1:
-            f.write(f'set(OPEN62541_VERSION "{git_describe_version}")\n')
+            f.write(f'set(opcua_VERSION "{git_describe_version}")\n')
         f.write(line)

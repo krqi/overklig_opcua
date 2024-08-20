@@ -1,19 +1,11 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2016-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Thomas Stalder, Blue Time Concept SA
- */
 
-#include <open62541/plugin/log_stdout.h>
-#include <open62541/types.h>
+#include <opcua/plugin/log_stdout.h>
+#include <opcua/types.h>
 
 #include <stdio.h>
 
 #include "mp_printf.h"
 
-/* ANSI escape sequences for color output taken from here:
- * https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c*/
 
 #ifdef UA_ARCHITECTURE_POSIX
 # define ANSI_COLOR_RED     "\x1b[31m"
@@ -44,8 +36,6 @@ logCategoryNames[UA_LOGCATEGORIES] =
     {"network", "channel", "session", "server", "client",
      "userland", "securitypolicy", "eventloop", "pubsub", "discovery"};
 
-/* Protect crosstalk during logging via global lock.
- * Use a spinlock on non-POSIX as we cannot statically initialize a global lock. */
 #if UA_MULTITHREADING >= 100
 # ifdef UA_ARCHITECTURE_POSIX
 UA_Lock logLock = UA_LOCK_STATIC_INIT;
@@ -66,7 +56,7 @@ __attribute__((__format__(__printf__, 4 , 0)))
 static void
 UA_Log_Stdout_log(void *context, UA_LogLevel level, UA_LogCategory category,
                   const char *msg, va_list args) {
-    /* MinLevel encoded in the context pointer */
+    
     UA_LogLevel minLevel = (UA_LogLevel)(uintptr_t)context;
     if(minLevel > level)
         return;
@@ -76,9 +66,9 @@ UA_Log_Stdout_log(void *context, UA_LogLevel level, UA_LogCategory category,
 
     int logLevelSlot = ((int)level / 100) - 1;
     if(logLevelSlot < 0 || logLevelSlot > 5)
-        logLevelSlot = 5; /* Set to fatal if the level is outside the range */
+        logLevelSlot = 5; 
 
-    /* Lock */
+    
 #if UA_MULTITHREADING >= 100
 # ifdef UA_ARCHITECTURE_POSIX
     UA_LOCK(&logLock);
@@ -90,7 +80,7 @@ UA_Log_Stdout_log(void *context, UA_LogLevel level, UA_LogCategory category,
 #define STDOUT_LOGBUFSIZE 512
     char logbuf[STDOUT_LOGBUFSIZE];
 
-    /* Log */
+    
     printf("[%04u-%02u-%02u %02u:%02u:%02u.%03u (UTC%+05d)] %s/%s" ANSI_COLOR_RESET "\t",
            dts.year, dts.month, dts.day, dts.hour, dts.min, dts.sec, dts.milliSec,
            (int)(tOffset / UA_DATETIME_SEC / 36), logLevelNames[logLevelSlot],
@@ -99,7 +89,7 @@ UA_Log_Stdout_log(void *context, UA_LogLevel level, UA_LogCategory category,
     printf("%s\n", logbuf);
     fflush(stdout);
 
-    /* Unlock */
+    
 #if UA_MULTITHREADING >= 100
 # ifdef UA_ARCHITECTURE_POSIX
     UA_UNLOCK(&logLock);

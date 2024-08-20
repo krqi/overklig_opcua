@@ -1,39 +1,22 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2014-2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2014, 2017 (c) Florian Palm
- *    Copyright 2015 (c) LEvertz
- *    Copyright 2015-2016 (c) Sten Grüner
- *    Copyright 2015 (c) Chris Iatrou
- *    Copyright 2015-2016 (c) Oleksiy Vasylyev
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2021 (c) Fraunhofer IOSB (Author: Jan Hermes)
- */
 
 #ifndef UA_UTIL_H_
 #define UA_UTIL_H_
 
 #define UA_INTERNAL
-#include <open62541/types.h>
-#include <open62541/util.h>
-#include <open62541/statuscodes.h>
+#include <opcua/types.h>
+#include <opcua/util.h>
+#include <opcua/statuscodes.h>
 
 #include "ua_types_encoding_binary.h"
 
 _UA_BEGIN_DECLS
 
-/* Macro-Expand for MSVC workarounds */
+
 #define UA_MACRO_EXPAND(x) x
 
-/* Try if the type of the value can be adjusted "in situ" to the target type.
- * That can be done, for example, to map between int32 and an enum. */
 void
 adjustType(UA_Variant *value, const UA_DataType *targetType);
 
-/* Short names for integer. These are not exposed on the public API, since many
- * user-applications make the same definitions in their headers. */
 typedef UA_Byte u8;
 typedef UA_SByte i8;
 typedef UA_UInt16 u16;
@@ -44,39 +27,31 @@ typedef UA_UInt64 u64;
 typedef UA_Int64 i64;
 typedef UA_StatusCode status;
 
-/* Well-known ReferenceTypes */
+
 UA_StatusCode
 lookupRefType(UA_Server *server, UA_QualifiedName *qn, UA_NodeId *outRefTypeId);
 
-/* Returns the canonical BrowseName of the ReferenceType or the encoded
- * NodeId. The outBN is assumed to be pre-allocated with a buffer. This fails if
- * the NodeId contains an '>' character, which makes the parsing ambigous. */
 UA_StatusCode
 getRefTypeBrowseName(const UA_NodeId *refTypeId, UA_String *outBN);
 
-/* Unescape &-escaped string. The string is modified */
+
 void
 UA_String_unescape(UA_String *s, UA_Boolean extended);
 
-/* Returns the position of the first unescaped reserved character (or the end
- * position) */
 char *
 find_unescaped(char *pos, char *end, UA_Boolean extended);
 
-/* Escape s2 and append it to s. Memory is allocated internally. */
+
 UA_StatusCode
 UA_String_escapeAppend(UA_String *s, const UA_String s2, UA_Boolean extended);
 
 UA_StatusCode
 UA_String_append(UA_String *s, const UA_String s2);
 
-/* Case insensitive lookup. Returns UA_ATTRIBUTEID_INVALID if not found. */
+
 UA_AttributeId
 UA_AttributeId_fromName(const UA_String name);
 
-/**
- * Error checking macros
- */
 
 static UA_INLINE UA_Boolean
 isGood(UA_StatusCode code) {
@@ -134,20 +109,6 @@ isTrue(uint8_t expr) {
                                           EVAL, UA_LOG_##LEVEL, LOGGER, CAT,             \
                                           __VA_ARGS__, ""))
 
-/**
- * Check Macros
- * Usage examples:
- *
- *    void *data = malloc(...);
- *    UA_CHECK(data, return error);
- *
- *    UA_StatusCode rv = some_func(...);
- *    UA_CHECK_STATUS(rv, return rv);
- *
- *    UA_Logger *logger = &server->config.logger;
- *    rv = bar_func(...);
- *    UA_CHECK_STATUS_WARN(rv, return rv, logger, UA_LOGCATEGORY_SERVER, "msg & args %s", "arg");
- */
 #define UA_CHECK_FATAL(A, EVAL, LOGGER, CAT, ...)                                        \
     UA_MACRO_EXPAND(UA_CHECK_LOG(A, EVAL, FATAL, LOGGER, CAT, __VA_ARGS__))
 #define UA_CHECK_ERROR(A, EVAL, LOGGER, CAT, ...)                                        \
@@ -186,9 +147,6 @@ isTrue(uint8_t expr) {
     UA_MACRO_EXPAND(                                                                     \
         UA_CHECK_MEM_LOG(PTR, EVAL, INFO, LOGGER, CAT, __VA_ARGS__))
 
-/**
- * Utility Functions
- * ----------------- */
 
 #ifdef UA_ENABLE_DISCOVERY_SEMAPHORE
 # ifdef _WIN32
@@ -203,21 +161,19 @@ isTrue(uint8_t expr) {
 void
 UA_cleanupDataTypeWithCustom(const UA_DataTypeArray *customTypes);
 
-/* Get the number of optional fields contained in an structure type */
+
 size_t UA_EXPORT
 getCountOfOptionalFields(const UA_DataType *type);
 
-/* Dump packet for debugging / fuzzing */
+
 #ifdef UA_DEBUG_DUMP_PKGS
 void UA_EXPORT
 UA_dump_hex_pkg(UA_Byte* buffer, size_t bufferLen);
 #endif
 
-/* Get pointer to leaf certificate of a specified valid chain of DER encoded
- * certificates */
 UA_ByteString getLeafCertificate(UA_ByteString chain);
 
-/* Unions that represent any of the supported request or response message */
+
 typedef union {
     UA_RequestHeader requestHeader;
     UA_FindServersRequest findServersRequest;
@@ -312,16 +268,14 @@ typedef union {
 #endif
 } UA_Response;
 
-/* Do not expose UA_String_equal_ignorecase to public API as it currently only handles
- * ASCII strings, and not UTF8! */
 UA_Boolean UA_EXPORT
 UA_String_equal_ignorecase(const UA_String *s1, const UA_String *s2);
 
-/********************/
-/* Encoding Helpers */
-/********************/
 
-/* out must be a buffer with at least 36 elements, the length of every guid */
+
+
+
+
 void UA_Guid_to_hex(const UA_Guid *guid, u8* out, UA_Boolean lower);
 
 #define UA_ENCODING_HELPERS(TYPE, UPCASE_TYPE)                          \
@@ -368,4 +322,4 @@ UA_ENCODING_HELPERS(DiagnosticInfo, DIAGNOSTICINFO)
 
 _UA_END_DECLS
 
-#endif /* UA_UTIL_H_ */
+#endif 

@@ -1,15 +1,7 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2017 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2017 (c) Mark Giraud, Fraunhofer IOSB
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- */
 
 #include "ua_client_internal.h"
 
-/* Helper method for additional warnings */
+
 void
 Client_warnEndpointsResult(UA_Client *client,
                            const UA_GetEndpointsResponse *response,
@@ -35,7 +27,7 @@ Client_warnEndpointsResult(UA_Client *client,
     }
 }
 
-/* Gets a list of endpoints. Memory is allocated for endpointDescription array */
+
 static UA_StatusCode
 getEndpointsInternal(UA_Client *client, const UA_String endpointUrl,
                      size_t *endpointDescriptionsSize,
@@ -76,7 +68,7 @@ UA_Client_getEndpoints(UA_Client *client, const char *serverUrl,
     UA_LOCK(&client->clientMutex);
 
     UA_Boolean connected = (client->channel.state == UA_SECURECHANNELSTATE_OPEN);
-    /* Client is already connected to a different server */
+    
     if(connected && strncmp((const char*)client->config.endpoint.endpointUrl.data, serverUrl,
                             client->config.endpoint.endpointUrl.length) != 0) {
         UA_UNLOCK(&client->clientMutex);
@@ -109,7 +101,7 @@ UA_Client_findServers(UA_Client *client, const char *serverUrl,
                       UA_ApplicationDescription **registeredServers) {
     UA_LOCK(&client->clientMutex);
     UA_Boolean connected = (client->channel.state == UA_SECURECHANNELSTATE_OPEN);
-    /* Client is already connected to a different server */
+    
     if(connected && strncmp((const char*)client->config.endpoint.endpointUrl.data, serverUrl,
                             client->config.endpoint.endpointUrl.length) != 0) {
         UA_UNLOCK(&client->clientMutex);
@@ -125,7 +117,7 @@ UA_Client_findServers(UA_Client *client, const char *serverUrl,
         }
     }
 
-    /* Prepare the request */
+    
     UA_FindServersRequest request;
     UA_FindServersRequest_init(&request);
     request.serverUrisSize = serverUrisSize;
@@ -133,14 +125,14 @@ UA_Client_findServers(UA_Client *client, const char *serverUrl,
     request.localeIdsSize = localeIdsSize;
     request.localeIds = localeIds;
 
-    /* Send the request */
+    
     UA_FindServersResponse response;
     __Client_Service(client, &request, &UA_TYPES[UA_TYPES_FINDSERVERSREQUEST],
                      &response, &UA_TYPES[UA_TYPES_FINDSERVERSRESPONSE]);
 
     UA_UNLOCK(&client->clientMutex);
 
-    /* Process the response */
+    
     retval = response.responseHeader.serviceResult;
     if(retval == UA_STATUSCODE_GOOD) {
         *registeredServersSize = response.serversSize;
@@ -152,7 +144,7 @@ UA_Client_findServers(UA_Client *client, const char *serverUrl,
         *registeredServers = NULL;
     }
 
-    /* Clean up */
+    
     UA_FindServersResponse_clear(&response);
     if(!connected)
         UA_Client_disconnect(client);
@@ -167,7 +159,7 @@ UA_Client_findServersOnNetwork(UA_Client *client, const char *serverUrl,
     UA_LOCK(&client->clientMutex);
 
     UA_Boolean connected = (client->channel.state == UA_SECURECHANNELSTATE_OPEN);
-    /* Client is already connected to a different server */
+    
     if(connected && strncmp((const char*)client->config.endpoint.endpointUrl.data, serverUrl,
                             client->config.endpoint.endpointUrl.length) != 0) {
         UA_UNLOCK(&client->clientMutex);
@@ -183,7 +175,7 @@ UA_Client_findServersOnNetwork(UA_Client *client, const char *serverUrl,
         }
     }
 
-    /* Prepare the request */
+    
     UA_FindServersOnNetworkRequest request;
     UA_FindServersOnNetworkRequest_init(&request);
     request.startingRecordId = startingRecordId;
@@ -191,14 +183,14 @@ UA_Client_findServersOnNetwork(UA_Client *client, const char *serverUrl,
     request.serverCapabilityFilterSize = serverCapabilityFilterSize;
     request.serverCapabilityFilter = serverCapabilityFilter;
 
-    /* Send the request */
+    
     UA_FindServersOnNetworkResponse response;
     __Client_Service(client, &request, &UA_TYPES[UA_TYPES_FINDSERVERSONNETWORKREQUEST],
                      &response, &UA_TYPES[UA_TYPES_FINDSERVERSONNETWORKRESPONSE]);
 
     UA_UNLOCK(&client->clientMutex);
 
-    /* Process the response */
+    
     retval = response.responseHeader.serviceResult;
     if(retval == UA_STATUSCODE_GOOD) {
         *serverOnNetworkSize = response.serversSize;
@@ -210,7 +202,7 @@ UA_Client_findServersOnNetwork(UA_Client *client, const char *serverUrl,
         *serverOnNetwork = NULL;
     }
 
-    /* Clean up */
+    
     UA_FindServersOnNetworkResponse_clear(&response);
     if(!connected)
         UA_Client_disconnect(client);

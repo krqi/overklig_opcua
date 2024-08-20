@@ -8,12 +8,12 @@ jobs:
       id: build
       uses: google/oss-fuzz/infra/cifuzz/actions/build_fuzzers@master
       with:
-        oss-fuzz-project-name: 'open62541'
+        oss-fuzz-project-name: 'opcua'
         dry-run: false
     - name: Run Fuzzers
       uses: google/oss-fuzz/infra/cifuzz/actions/run_fuzzers@master
       with:
-        oss-fuzz-project-name: 'open62541'
+        oss-fuzz-project-name: 'opcua'
         fuzz-seconds: 600
         dry-run: false
     - name: Upload Crash

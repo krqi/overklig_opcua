@@ -1,22 +1,22 @@
-# Contributing to open62541
+# Contributing to opcua
 
-Contributions to open62541 include code, documentation, answering user
+Contributions to opcua include code, documentation, answering user
 questions, running the project's infrastructure, and advocating for all types of
-open62541 users.
+opcua users.
 
-The open62541 project welcomes all contributions from anyone willing to work in
+The opcua project welcomes all contributions from anyone willing to work in
 good faith with other contributors and the community. No contribution is too
 small and all contributions are valued.
 
-This guide explains the process for contributing to the open62541 project's core
+This guide explains the process for contributing to the opcua project's core
 repository and describes what to expect at each step. Thank you for considering
 these point.
 
-Your friendly open62541 community!
+Your friendly opcua community!
 
 ## Code of Conduct
 
-The open62541 project has a [Code of Conduct](./CODE_OF_CONDUCT.md) that *all*
+The opcua project has a [Code of Conduct](./CODE_OF_CONDUCT.md) that *all*
 contributors are expected to follow. This code describes the *minimum* behavior
 expectations for all contributors.
 
@@ -38,7 +38,7 @@ The following are the minimal requirements that every PR needs to meet.
 - **Signed CLA**: Every contributor must sign the Contributor License Agreement
   (CLA) before we can merge his first PR. The signing can be done online. The
   link automatically appears on the page of the first PR. In addition, the CLA
-  text can be accessed [here](https://cla-assistant.io/open62541/open62541).
+  text can be accessed [here](https://cla-assistant.io/opcua/opcua).
 
 - **Separation of Concerns**: Small changes are much easier to review.
   Typically, small PR are merged much faster. For larger contributions, it might
@@ -205,16 +205,8 @@ the place to reference GitHub issues that this commit **Closes**.
 Use C-style comments as follows:
 
 ```c
-/* Lorem ipsum dolor sit amet */
 
-/* Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy
- * eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam
- * voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita
- * kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem
- * ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod
- * tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.
- * At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd
- * gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. */
+
 ```
 
 Note that public header files (in the /include directory) use comments beginning
@@ -222,7 +214,7 @@ with a double-star to generate documentation. Just follow along the formatting
 that is already in place.
 
 ```c
-/** This is documentation */
+
 ```
 
 Every (good) editor can reflow comments for nice formatting.
@@ -383,14 +375,14 @@ action, while logging a specified error level message:
 UA_Logger *logger = &server->config.logger;
 
 UA_StatusCode rv = someAction();
-/* logging "error" level with the "_ERROR" suffix */
+
 UA_CHECK_STATUS_ERROR(rv, return rv, logger, UA_LOGCATEGORY_SERVER, "my message");
 ```
 
 In some situations it is nice to use the `goto` command in C. This is the case
 e.g. for jumping to cleanup routines that are used to perform a series of commands.
 
-For the development of `open62541` we employ a specific rule for which cleanup
+For the development of `opcua` we employ a specific rule for which cleanup
 routines should be used: **If the same cleanup routine is used from at least two
 places in the same function then this routine should be called via a `goto`
 statement.**
@@ -420,11 +412,11 @@ void yesCleanupRoutine(void *data) {
     data = malloc(sizeof(int));
     UA_CHECK_MEM(data, return UA_STATUSCODE_BADOUTOFMEMORY);
   
-    /* jumps to cleanup routine upon encountering a bad statuscode */
+    
     UA_StatusCode rv = do_something();
     UA_CHECK_STATUS(rv, goto cleanup);
  
-    /* jumps to the same cleanup routine */
+    
     rv = do_something_else();
     UA_CHECK_STATUS(rv, goto cleanup);
    
@@ -444,15 +436,11 @@ static UA_StatusCode
 foo(int *errorCounter) {
     
     UA_StatusCode rv = do_something();
-    /* if rv != UA_STATUSCODE_GOOD then "return rv" gets evaluated */
+    
     UA_CHECK_STATUS(rv, return rv);
   
     rv = do_another_thing();
     
-    /* 
-    EVAL_ON_ERROR can take multiple statements
-    (e.g. first modifying some value then return the error code) 
-    */
     UA_CHECK_STATUS(rv, rv = UA_STATUSCODE_BAD; errorCounter++; return rv);
 
     return UA_STATUSCODE_GOOD;
@@ -466,16 +454,11 @@ levels and a specified `LOGCATEGORY` are generated with a given logger.
 static UA_StatusCode
 foo(UA_Server *server) {
     
-    /* assign the logger for later simple use */
+    
     UA_Logger *logger = &server->config.logger;
     
     UA_StatusCode rv = do_something_error();
 
-    /* 
-    if rv != UA_STATUSCODE_GOOD then 
-    an error logging message is generated and 
-    "return rv" gets evaluated
-    */
     UA_CHECK_STATUS_ERROR(rv, return rv,
                    logger, UA_LOGCATEGORY_SERVER,
                    "My error logging message with special info: %d", 42);
@@ -507,26 +490,17 @@ with a short example to explain the basic usage:
 static UA_StatusCode
 foo() {
  
-    /* assign the logger for later simple use */
+    
     UA_Logger *logger = &server->config.logger;
     
     UA_Boolean mustBeTrue = do_something();
-    /* if mustBeTrue != true then "return UA_STATUSCODE_BAD" gets evaluated */
+    
     UA_CHECK(mustBeTrue, return UA_STATUSCODE_BAD);
    
     UA_StatusCode rv = UA_STATUSCODE_GOOD;
-    /*
-    EVAL_ON_ERROR can take multiple statements
-    (e.g. first assigning some value then return the error code) 
-    */
     UA_CHECK(mustBeTrue, rv = UA_STATUSCODE_BAD; return rv);
 
     UA_Boolean mustBeTrue = do_something_else();
-    /* 
-    if mustBeTrue != true then 
-    an error logging message is generated and 
-    "return UA_STATUSCODE_BAD" gets evaluated 
-    */
     UA_CHECK_ERROR(mustBeTrue, return UA_STATUSCODE_BAD,
                    logger, UA_LOGCATEGORY_SERVER,
                    "My logging message with special info: %d", 42);

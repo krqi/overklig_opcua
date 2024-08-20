@@ -1,22 +1,12 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2018 (c) Ari Breitkreuz, fortiss GmbH
- *    Copyright 2020 (c) Christian von Arnim, ISW University of Stuttgart (for VDW and umati)
- *    Copyright 2021 (c) Fraunhofer IOSB (Author: Andreas Ebner)
- */
 
 #include "ua_server_internal.h"
 #include "ua_subscription.h"
 
 #ifdef UA_ENABLE_SUBSCRIPTIONS_EVENTS
 
-/* We use a 16-Byte ByteString as an identifier */
+
 UA_StatusCode
 generateEventId(UA_ByteString *generatedId) {
-    /* EventId is a ByteString, which is basically just a string
-     * We will use a 16-Byte ByteString as an identifier */
     UA_StatusCode res = UA_ByteString_allocBuffer(generatedId, 16 * sizeof(UA_Byte));
     if(res != UA_STATUSCODE_GOOD)
         return res;
@@ -37,7 +27,7 @@ createEvent(UA_Server *server, const UA_NodeId eventType, UA_NodeId *outNodeId) 
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
-    /* Make sure the eventType is a subtype of BaseEventType */
+    
     UA_NodeId baseEventTypeId = UA_NODEID_NUMERIC(0, UA_NS0ID_BASEEVENTTYPE);
     if(!isNodeInTree_singleRef(server, &eventType, &baseEventTypeId,
                                UA_REFERENCETYPEINDEX_HASSUBTYPE)) {
@@ -46,21 +36,21 @@ createEvent(UA_Server *server, const UA_NodeId eventType, UA_NodeId *outNodeId) 
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
-    /* Create an ObjectNode which represents the event */
+    
     UA_QualifiedName name;
-    /*  set a dummy name. This is not used. */
+    
     name = UA_QUALIFIEDNAME(0,"E");
     UA_NodeId newNodeId = UA_NODEID_NULL;
     UA_ObjectAttributes oAttr = UA_ObjectAttributes_default;
     UA_StatusCode retval = addNode(server, UA_NODECLASS_OBJECT,
-                                   UA_NODEID_NULL, /* Set a random unused NodeId */
-                                   UA_NODEID_NULL, /* No parent */
-                                   UA_NODEID_NULL, /* No parent reference */
-                                   name,           /* an event does not have a name */
-                                   eventType,      /* the type of the event */
-                                   &oAttr,         /* default attributes are fine */
+                                   UA_NODEID_NULL, 
+                                   UA_NODEID_NULL, 
+                                   UA_NODEID_NULL, 
+                                   name,           
+                                   eventType,      
+                                   &oAttr,         
                                    &UA_TYPES[UA_TYPES_OBJECTATTRIBUTES],
-                                   NULL,           /* no node context */
+                                   NULL,           
                                    &newNodeId);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_LOG_ERROR(server->config.logging, UA_LOGCATEGORY_USERLAND,
@@ -68,7 +58,7 @@ createEvent(UA_Server *server, const UA_NodeId eventType, UA_NodeId *outNodeId) 
         return retval;
     }
 
-    /* Find the eventType variable */
+    
     name = UA_QUALIFIEDNAME(0, "EventType");
     UA_BrowsePathResult bpr = browseSimplifiedBrowsePath(server, newNodeId, 1, &name);
     if(bpr.statusCode != UA_STATUSCODE_GOOD || bpr.targetsSize < 1) {
@@ -79,7 +69,7 @@ createEvent(UA_Server *server, const UA_NodeId eventType, UA_NodeId *outNodeId) 
         return retval;
     }
 
-    /* Set the EventType */
+    
     UA_Variant value;
     UA_Variant_init(&value);
     UA_Variant_setScalar(&value, (void*)(uintptr_t)&eventType, &UA_TYPES[UA_TYPES_NODEID]);
@@ -107,7 +97,7 @@ UA_Server_createEvent(UA_Server *server, const UA_NodeId eventType,
 static UA_StatusCode
 eventSetStandardFields(UA_Server *server, const UA_NodeId *event,
                        const UA_NodeId *origin, UA_ByteString *outEventId) {
-    /* Set the SourceNode */
+    
     UA_StatusCode retval;
     UA_QualifiedName name = UA_QUALIFIEDNAME(0, "SourceNode");
     UA_BrowsePathResult bpr = browseSimplifiedBrowsePath(server, *event, 1, &name);
@@ -125,7 +115,7 @@ eventSetStandardFields(UA_Server *server, const UA_NodeId *event,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* Set the ReceiveTime */
+    
     name = UA_QUALIFIEDNAME(0, "ReceiveTime");
     bpr = browseSimplifiedBrowsePath(server, *event, 1, &name);
     if(bpr.statusCode != UA_STATUSCODE_GOOD || bpr.targetsSize < 1) {
@@ -142,7 +132,7 @@ eventSetStandardFields(UA_Server *server, const UA_NodeId *event,
     if(retval != UA_STATUSCODE_GOOD)
         return retval;
 
-    /* Set the EventId */
+    
     UA_ByteString eventId = UA_BYTESTRING_NULL;
     retval = generateEventId(&eventId);
     if(retval != UA_STATUSCODE_GOOD)
@@ -164,7 +154,7 @@ eventSetStandardFields(UA_Server *server, const UA_NodeId *event,
         return retval;
     }
 
-    /* Return the EventId */
+    
     if(outEventId)
         *outEventId = eventId;
     else
@@ -173,31 +163,25 @@ eventSetStandardFields(UA_Server *server, const UA_NodeId *event,
     return UA_STATUSCODE_GOOD;
 }
 
-/* Filters an event according to the filter specified by mon and then adds it to
- * mons notification queue */
 UA_StatusCode
 UA_MonitoredItem_addEvent(UA_Server *server, UA_MonitoredItem *mon,
                           const UA_NodeId *event) {
-    /* Get the filter */
+    
     if(mon->parameters.filter.content.decoded.type != &UA_TYPES[UA_TYPES_EVENTFILTER])
         return UA_STATUSCODE_BADFILTERNOTALLOWED;
     UA_EventFilter *eventFilter = (UA_EventFilter*)
         mon->parameters.filter.content.decoded.data;
 
-    /* A MonitoredItem is always attached to a (local) Subscription.
-     * A Subscription may not be attached to a Session. */
     UA_Subscription *sub = mon->subscription;
     UA_assert(sub);
 
-    /* Values to be returned when the filter matches */
+    
     UA_EventFieldList values;
     UA_EventFieldList_init(&values);
 
-    UA_EventFilterResult efr; /* FilterResult contains only statuscodes. Ignored
-                               * outside the initial setup/validation. */
     UA_EventFilterResult_init(&efr);
 
-    /* Evaluate the filter. Return if it doesn't match. */
+    
     UA_StatusCode ret = filterEvent(server, sub->session, event,
                                     eventFilter, &values, &efr);
     UA_EventFilterResult_clear(&efr);
@@ -208,14 +192,14 @@ UA_MonitoredItem_addEvent(UA_Server *server, UA_MonitoredItem *mon,
         return ret;
     }
 
-    /* Allocate memory for the notification */
+    
     UA_Notification *notification = UA_Notification_new();
     if(!notification) {
         UA_EventFieldList_clear(&values);
         return UA_STATUSCODE_BADOUTOFMEMORY;
     }
 
-    /* Prepare and enqueue the notification */
+    
     notification->data.event = values;
     notification->data.event.clientHandle = mon->parameters.clientHandle;
     notification->mon = mon;
@@ -230,13 +214,13 @@ setHistoricalEvent(UA_Server *server, const UA_NodeId *origin,
     UA_Variant historicalEventFilterValue;
     UA_Variant_init(&historicalEventFilterValue);
 
-    /* A HistoricalEventNode that has event history available will provide this property */
+    
     UA_StatusCode retval =
         readObjectProperty(server, *emitNodeId,
                            UA_QUALIFIEDNAME(0, "HistoricalEventFilter"),
                            &historicalEventFilterValue);
     if(retval != UA_STATUSCODE_GOOD) {
-        /* Do not vex users with no match errors */
+        
         if(retval != UA_STATUSCODE_BADNOMATCH)
             UA_LOG_WARNING(server->config.logging, UA_LOGCATEGORY_SERVER,
                            "Cannot read the HistoricalEventFilter property of a "
@@ -245,7 +229,7 @@ setHistoricalEvent(UA_Server *server, const UA_NodeId *origin,
         return;
     }
 
-    /* If found then check if HistoricalEventFilter property has a valid value */
+    
     if(UA_Variant_isEmpty(&historicalEventFilterValue) ||
        !UA_Variant_isScalar(&historicalEventFilterValue) ||
        historicalEventFilterValue.type != &UA_TYPES[UA_TYPES_EVENTFILTER]) {
@@ -256,7 +240,7 @@ setHistoricalEvent(UA_Server *server, const UA_NodeId *origin,
         return;
     }
 
-    /* Finally, if found and valid then filter */
+    
     UA_EventFilter *filter = (UA_EventFilter*) historicalEventFilterValue.data;
     UA_EventFieldList efl;
     UA_EventFilterResult result;
@@ -301,9 +285,9 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
           return UA_STATUSCODE_BADINVALIDARGUMENT;
         }
     }
-#endif /* UA_ENABLE_SUBSCRIPTIONS_ALARMS_CONDITIONS */
+#endif 
 
-    /* Check that the origin node exists */
+    
     const UA_Node *originNode = UA_NODESTORE_GET(server, &origin);
     if(!originNode) {
         UA_LOG_ERROR(server->config.logging, UA_LOGCATEGORY_USERLAND,
@@ -312,8 +296,8 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
     }
     UA_NODESTORE_RELEASE(server, originNode);
 
-    /* Make sure the origin is in the ObjectsFolder (TODO: or in the ViewsFolder) */
-    /* Only use Organizes and HasComponent to check if we are below the ObjectsFolder */
+    
+    
     UA_StatusCode retval;
     UA_ReferenceTypeSet refTypes;
     UA_ReferenceTypeSet_init(&refTypes);
@@ -334,7 +318,7 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
         return UA_STATUSCODE_BADINVALIDARGUMENT;
     }
 
-    /* Update the standard fields of the event */
+    
     retval = eventSetStandardFields(server, &eventNodeId, &origin, outEventId);
     if(retval != UA_STATUSCODE_GOOD) {
         UA_LOG_WARNING(server->config.logging, UA_LOGCATEGORY_SERVER,
@@ -343,23 +327,14 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
         return retval;
     }
 
-    /* List of nodes that emit the node. Events propagate upwards (bubble up) in
-     * the node hierarchy. */
     UA_ExpandedNodeId *emitNodes = NULL;
     size_t emitNodesSize = 0;
 
-    /* Add the server node to the list of nodes from which the event is emitted.
-     * The server node emits all events.
-     *
-     * Part 3, 7.17: In particular, the root notifier of a Server, the Server
-     * Object defined in Part 5, is always capable of supplying all Events from
-     * a Server and as such has implied HasEventSource References to every event
-     * source in a Server. */
     UA_NodeId emitStartNodes[2];
     emitStartNodes[0] = origin;
     emitStartNodes[1] = UA_NODEID_NUMERIC(0, UA_NS0ID_SERVER);
 
-    /* Get all ReferenceTypes over which the events propagate */
+    
     UA_ReferenceTypeSet emitRefTypes;
     UA_ReferenceTypeSet_init(&emitRefTypes);
     for(size_t i = 0; i < EMIT_REFS_ROOT_COUNT; i++) {
@@ -374,7 +349,7 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
         emitRefTypes = UA_ReferenceTypeSet_union(emitRefTypes, tmpRefTypes);
     }
 
-    /* Get the list of nodes in the hierarchy that emits the event. */
+    
     retval = browseRecursive(server, 2, emitStartNodes, UA_BROWSEDIRECTION_INVERSE,
                              &emitRefTypes, UA_NODECLASS_UNSPECIFIED, true,
                              &emitNodesSize, &emitNodes);
@@ -385,23 +360,23 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
         goto cleanup;
     }
 
-    /* Add the event to the listening MonitoredItems at each relevant node */
+    
     for(size_t i = 0; i < emitNodesSize; i++) {
-        /* Get the node */
+        
         const UA_Node *node = UA_NODESTORE_GET(server, &emitNodes[i].nodeId);
         if(!node)
             continue;
 
-        /* Only consider objects */
+        
         if(node->head.nodeClass != UA_NODECLASS_OBJECT) {
             UA_NODESTORE_RELEASE(server, node);
             continue;
         }
 
-        /* Add event to monitoreditems */
+        
         UA_MonitoredItem *mon = node->head.monitoredItems;
         for(; mon != NULL; mon = mon->sampling.nodeListNext) {
-            /* Is this an Event-MonitoredItem? */
+            
             if(mon->itemToMonitor.attributeId != UA_ATTRIBUTEID_EVENTNOTIFIER)
                 continue;
             retval = UA_MonitoredItem_addEvent(server, mon, &eventNodeId);
@@ -409,20 +384,20 @@ triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
                 UA_LOG_WARNING(server->config.logging, UA_LOGCATEGORY_SERVER,
                                "Events: Could not add the event to a listening "
                                "node with StatusCode %s", UA_StatusCode_name(retval));
-                retval = UA_STATUSCODE_GOOD; /* Only log problems with individual emit nodes */
+                retval = UA_STATUSCODE_GOOD; 
             }
         }
 
         UA_NODESTORE_RELEASE(server, node);
 
-        /* Add event entry in the historical database */
+        
 #ifdef UA_ENABLE_HISTORIZING
         if(server->config.historyDatabase.setEvent)
             setHistoricalEvent(server, &origin, &emitNodes[i].nodeId, &eventNodeId);
 #endif
     }
 
-    /* Delete the node representation of the event */
+    
     if(deleteEventNode) {
         retval = deleteNode(server, eventNodeId, true);
         if(retval != UA_STATUSCODE_GOOD) {
@@ -448,4 +423,4 @@ UA_Server_triggerEvent(UA_Server *server, const UA_NodeId eventNodeId,
     return res;
 }
 
-#endif /* UA_ENABLE_SUBSCRIPTIONS_EVENTS */
+#endif 

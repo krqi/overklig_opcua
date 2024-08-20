@@ -1,22 +1,8 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2015 (c) Chris Iatrou
- *    Copyright 2015-2017 (c) Florian Palm
- *    Copyright 2015-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2015-2016 (c) Sten Grüner
- *    Copyright 2015 (c) Oleksiy Vasylyev
- *    Copyright 2016 (c) LEvertz
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Julian Grothoff
- *    Copyright 2020 (c) Hilscher Gesellschaft für Systemautomation mbH (Author: Martin Lang)
- */
 
 #include "ua_services.h"
 #include "ua_server_internal.h"
 
-#ifdef UA_ENABLE_METHODCALLS /* conditional compilation */
+#ifdef UA_ENABLE_METHODCALLS 
 
 #define UA_MAX_METHOD_ARGUMENTS 64
 
@@ -63,13 +49,11 @@ getArgumentsVariableNode(UA_Server *server, const UA_NodeHead *head,
     return NULL;
 }
 
-/* inputArgumentResults has the length request->inputArgumentsSize */
+
 static UA_StatusCode
 checkAdjustArguments(UA_Server *server, UA_Session *session,
                      const UA_VariableNode *argRequirements, size_t argsSize,
                      UA_Variant *args, UA_StatusCode *inputArgumentResults) {
-    /* Verify that we have a Variant containing UA_Argument (scalar or array) in
-     * the "InputArguments" node */
     if(argRequirements->valueSource != UA_VALUESOURCE_DATA)
         return UA_STATUSCODE_BADINTERNALERROR;
     if(!argRequirements->value.data.value.hasValue)
@@ -77,8 +61,6 @@ checkAdjustArguments(UA_Server *server, UA_Session *session,
     if(argRequirements->value.data.value.value.type != &UA_TYPES[UA_TYPES_ARGUMENT])
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Verify the number of arguments. A scalar argument value is interpreted as
-     * an array of length 1. */
     size_t argReqsSize = argRequirements->value.data.value.value.arrayLength;
     if(UA_Variant_isScalar(&argRequirements->value.data.value.value))
         argReqsSize = 1;
@@ -87,15 +69,15 @@ checkAdjustArguments(UA_Server *server, UA_Session *session,
     if(argReqsSize < argsSize)
         return UA_STATUSCODE_BADTOOMANYARGUMENTS;
 
-    /* Type-check every argument against the definition */
+    
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
     UA_Argument *argReqs = (UA_Argument*)argRequirements->value.data.value.value.data;
     const char *reason;
     for(size_t i = 0; i < argReqsSize; ++i) {
-        /* Incompatible value. Try to correct the type if possible. */
+        
         adjustValueType(server, &args[i], &argReqs[i].dataType);
 
-        /* Check */
+        
         if(!compatibleValue(server, session, &argReqs[i].dataType, argReqs[i].valueRank,
                             argReqs[i].arrayDimensionsSize, argReqs[i].arrayDimensions,
                             &args[i], NULL, &reason)) {
@@ -145,7 +127,7 @@ static UA_StatusCode
 checkFunctionalGroupMethodReference(UA_Server *server, const UA_NodeHead *h,
                                     const UA_ExpandedNodeId *methodId,
                                     UA_Boolean *found) {
-    /* Check whether the DI namespace is available */
+    
     size_t foundNamespace = 0;
     UA_StatusCode res = getNamespaceByName(server, namespaceDiModel, &foundNamespace);
     UA_CHECK_STATUS(res, return UA_STATUSCODE_BADMETHODINVALID);
@@ -156,19 +138,17 @@ checkFunctionalGroupMethodReference(UA_Server *server, const UA_NodeHead *h,
                                &hasTypeDefinitionRefs, true);
     UA_CHECK_STATUS(res, return res);
 
-    /* Search for a HasTypeDefinition (or sub-) reference to the FunctionGroupType */
+    
     UA_Boolean isFunctionGroup = false;
     for(size_t i = 0; i < h->referencesSize && !isFunctionGroup; ++i) {
         UA_NodeReferenceKind *rk = &h->references[i];
         if(rk->isInverse)
             continue;
 
-        /* Are these HasTypeDefinition references */
+        
         if(!UA_ReferenceTypeSet_contains(&hasTypeDefinitionRefs, rk->referenceTypeIndex))
             continue;
 
-        /* Reference points to FunctionGroupType (or sub-type) from the DI
-         * model? */
         isFunctionGroup =
             (UA_NodeReferenceKind_iterate(rk, iterateFunctionGroupSearch,
                                           server) != NULL);
@@ -178,8 +158,6 @@ checkFunctionalGroupMethodReference(UA_Server *server, const UA_NodeHead *h,
     if(!isFunctionGroup)
         return UA_STATUSCODE_GOOD;
 
-    /* Search for the called method with reference Organize (or sub-type) from
-     * the parent object */
     UA_ReferenceTypeSet organizesRefs;
     res = referenceTypeIndices(server, &organizedByNodeId, &organizesRefs, true);
     UA_CHECK_STATUS(res, return res);
@@ -203,29 +181,25 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
                         const UA_MethodNode *method, const UA_ObjectNode *object) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Verify the object's NodeClass */
+    
     if(object->head.nodeClass != UA_NODECLASS_OBJECT &&
        object->head.nodeClass != UA_NODECLASS_OBJECTTYPE) {
         result->statusCode = UA_STATUSCODE_BADNODECLASSINVALID;
         return;
     }
 
-    /* Verify the method's NodeClass */
+    
     if(method->head.nodeClass != UA_NODECLASS_METHOD) {
         result->statusCode = UA_STATUSCODE_BADNODECLASSINVALID;
         return;
     }
 
-    /* Is there a method to execute? */
+    
     if(!method->method) {
         result->statusCode = UA_STATUSCODE_BADINTERNALERROR;
         return;
     }
 
-    /* Verify method/object relations. Object must have a hasComponent or a
-     * subtype of hasComponent reference to the method node. Therefore, check
-     * every reference between the parent object and the method node if there is
-     * a hasComponent (or subtype) reference */
     UA_ExpandedNodeId methodId = UA_EXPANDEDNODEID_NODEID(request->methodId);
     UA_ReferenceTypeSet hasComponentRefs;
     result->statusCode = referenceTypeIndices(server, &hasComponentNodeId,
@@ -234,10 +208,6 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
     UA_Boolean found = checkMethodReference(&object->head, hasComponentRefs, &methodId);
 
     if(!found) {
-        /* If the object doesn't have a hasComponent reference to the method node,
-         * check its objectType (and its supertypes). Invoked method can be a component
-         * of objectType and be invoked on this objectType's instance (or on a instance
-         * of one of its subtypes). */
         const UA_Node *objectType = getNodeType(server, &object->head);
         if(objectType) {
             found = checkMethodReference(&objectType->head, hasComponentRefs, &methodId);
@@ -246,16 +216,6 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
     }
 
     if(!found) {
-        /* The following ParentObject evaluation is a workaround only to fulfill
-         * the OPC UA Spec. Part 100 - Devices requirements regarding functional
-         * groups. Compare OPC UA Spec. Part 100 - Devices, Release 1.02
-         *    - 5.4 FunctionalGroupType
-         *    - B.1 Functional Group Usages
-         * A functional group is a sub-type of the FolderType and is used to
-         * organize the Parameters and Methods from the complete set (named
-         * ParameterSet and MethodSet) in (Functional) groups for instance
-         * Configuration or Identification. The same Property, Parameter or
-         * Method can be referenced from more than one FunctionalGroup. */
         result->statusCode =
             checkFunctionalGroupMethodReference(server, &object->head, &methodId, &found);
         if(!found && result->statusCode == UA_STATUSCODE_GOOD)
@@ -263,7 +223,7 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
         UA_CHECK_STATUS(result->statusCode, return);
     }
 
-    /* Verify access rights */
+    
     UA_Boolean executable = method->executable;
     if(session != &server->adminSession) {
         UA_UNLOCK(&server->serviceMutex);
@@ -280,11 +240,6 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
         return;
     }
 
-    /* The input arguments are const and not changed. We move the input
-     * arguments to a secondary array that is mutable. This is used for small
-     * adjustments on the type level during the type checking. But it has to be
-     * ensured that the original array can still by _clear'ed after the methods
-     * call. */
     if(request->inputArgumentsSize > UA_MAX_METHOD_ARGUMENTS) {
         result->statusCode = UA_STATUSCODE_BADTOOMANYARGUMENTS;
         return;
@@ -293,7 +248,7 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
     memcpy(mutableInputArgs, request->inputArguments,
            sizeof(UA_Variant) * request->inputArgumentsSize);
 
-    /* Allocate the inputArgumentResults array */
+    
     result->inputArgumentResults = (UA_StatusCode*)
         UA_Array_new(request->inputArgumentsSize, &UA_TYPES[UA_TYPES_STATUSCODE]);
     if(!result->inputArgumentResults) {
@@ -302,7 +257,7 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
     }
     result->inputArgumentResultsSize = request->inputArgumentsSize;
 
-    /* Type-check the input arguments */
+    
     const UA_VariableNode *inputArguments =
         getArgumentsVariableNode(server, &method->head, UA_STRING("InputArguments"));
     if(inputArguments) {
@@ -317,7 +272,7 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
         }
     }
 
-    /* Return inputArgumentResults only for BADINVALIDARGUMENT */
+    
     if(result->statusCode != UA_STATUSCODE_BADINVALIDARGUMENT) {
         UA_Array_delete(result->inputArgumentResults, result->inputArgumentResultsSize,
                         &UA_TYPES[UA_TYPES_STATUSCODE]);
@@ -325,15 +280,15 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
         result->inputArgumentResultsSize = 0;
     }
 
-    /* Error during type-checking? */
+    
     if(result->statusCode != UA_STATUSCODE_GOOD)
         return;
 
-    /* Get the output arguments node */
+    
     const UA_VariableNode *outputArguments =
         getArgumentsVariableNode(server, &method->head, UA_STRING("OutputArguments"));
 
-    /* Allocate the output arguments array */
+    
     size_t outputArgsSize = 0;
     if(outputArguments)
         outputArgsSize = outputArguments->value.data.value.value.arrayLength;
@@ -345,10 +300,10 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
     }
     result->outputArgumentsSize = outputArgsSize;
 
-    /* Release the output arguments node */
+    
     UA_NODESTORE_RELEASE(server, (const UA_Node*)outputArguments);
 
-    /* Call the method */
+    
     UA_UNLOCK(&server->serviceMutex);
     result->statusCode = method->method(server, &session->sessionId, session->context,
                                         &method->head.nodeId, method->head.context,
@@ -356,7 +311,7 @@ callWithMethodAndObject(UA_Server *server, UA_Session *session,
                                         request->inputArgumentsSize, mutableInputArgs,
                                         result->outputArgumentsSize, result->outputArguments);
     UA_LOCK(&server->serviceMutex);
-    /* TODO: Verify Output matches the argument definition */
+    
 }
 
 #if UA_MULTITHREADING >= 100
@@ -366,9 +321,6 @@ Operation_CallMethodAsync(UA_Server *server, UA_Session *session, UA_UInt32 requ
                           UA_UInt32 requestHandle, size_t opIndex,
                           UA_CallMethodRequest *opRequest, UA_CallMethodResult *opResult,
                           UA_AsyncResponse **ar) {
-    /* Get the method node. We only need the nodeClass and executable attribute.
-     * Take all forward hasProperty references to get the input/output argument
-     * definition variables. */
     const UA_Node *method =
         UA_NODESTORE_GET_SELECTIVE(server, &opRequest->methodId,
                                    UA_NODEATTRIBUTESMASK_NODECLASS |
@@ -380,10 +332,6 @@ Operation_CallMethodAsync(UA_Server *server, UA_Session *session, UA_UInt32 requ
         return;
     }
 
-    /* Get the object node. We only need the NodeClass attribute. But take all
-     * references for now.
-     *
-     * TODO: Which references do we need actually? */
     const UA_Node *object =
         UA_NODESTORE_GET_SELECTIVE(server, &opRequest->objectId,
                                    UA_NODEATTRIBUTESMASK_NODECLASS,
@@ -395,16 +343,16 @@ Operation_CallMethodAsync(UA_Server *server, UA_Session *session, UA_UInt32 requ
         return;
     }
 
-    /* Synchronous execution */
+    
     if(!method->methodNode.async) {
         callWithMethodAndObject(server, session, opRequest, opResult,
                                 &method->methodNode, &object->objectNode);
         goto cleanup;
     }
 
-    /* <-- Async method call --> */
+    
 
-    /* No AsyncResponse allocated so far */
+    
     if(!*ar) {
         opResult->statusCode =
             UA_AsyncManager_createAsyncResponse(&server->asyncManager, server,
@@ -414,13 +362,13 @@ Operation_CallMethodAsync(UA_Server *server, UA_Session *session, UA_UInt32 requ
             goto cleanup;
     }
 
-    /* Create the Async Request to be taken by workers */
+    
     opResult->statusCode =
         UA_AsyncManager_createAsyncOp(&server->asyncManager,
                                       server, *ar, opIndex, opRequest);
 
  cleanup:
-    /* Release the method and object node */
+    
     UA_NODESTORE_RELEASE(server, method);
     UA_NODESTORE_RELEASE(server, object);
 }
@@ -446,14 +394,10 @@ Service_CallAsync(UA_Server *server, UA_Session *session, UA_UInt32 requestId,
 
     if(ar) {
         if(ar->opCountdown > 0) {
-            /* Move all results to the AsyncResponse. The async operation
-             * results will be overwritten when the workers return results. */
             ar->response.callResponse = *response;
             UA_CallResponse_init(response);
             *finished = false;
         } else {
-            /* If there is a new AsyncResponse, ensure it has at least one
-             * pending operation */
             UA_AsyncManager_removeAsyncResponse(&server->asyncManager, ar);
         }
     }
@@ -463,9 +407,6 @@ Service_CallAsync(UA_Server *server, UA_Session *session, UA_UInt32 requestId,
 static void
 Operation_CallMethod(UA_Server *server, UA_Session *session, void *context,
                      const UA_CallMethodRequest *request, UA_CallMethodResult *result) {
-    /* Get the method node. We only need the nodeClass and executable attribute.
-     * Take all forward hasProperty references to get the input/output argument
-     * definition variables. */
     const UA_Node *method =
         UA_NODESTORE_GET_SELECTIVE(server, &request->methodId,
                                    UA_NODEATTRIBUTESMASK_NODECLASS |
@@ -477,10 +418,6 @@ Operation_CallMethod(UA_Server *server, UA_Session *session, void *context,
         return;
     }
 
-    /* Get the object node. We only need the NodeClass attribute. But take all
-     * references for now.
-     *
-     * TODO: Which references do we need actually? */
     const UA_Node *object =
         UA_NODESTORE_GET_SELECTIVE(server, &request->objectId,
                                    UA_NODEATTRIBUTESMASK_NODECLASS,
@@ -492,11 +429,11 @@ Operation_CallMethod(UA_Server *server, UA_Session *session, void *context,
         return;
     }
 
-    /* Continue with method and object as context */
+    
     callWithMethodAndObject(server, session, request, result,
                             &method->methodNode, &object->objectNode);
 
-    /* Release the method and object node */
+    
     UA_NODESTORE_RELEASE(server, method);
     UA_NODESTORE_RELEASE(server, object);
 }
@@ -529,4 +466,4 @@ UA_Server_call(UA_Server *server, const UA_CallMethodRequest *request) {
     return result;
 }
 
-#endif /* UA_ENABLE_METHODCALLS */
+#endif 

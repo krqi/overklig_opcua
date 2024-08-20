@@ -34,7 +34,7 @@
 # define CJ5_INLINE inline
 #endif
 
-/* vs2008 does not have INFINITY and NAN defined */
+
 #ifndef INFINITY
 # define INFINITY ((double)(DBL_MAX+DBL_MAX))
 #endif
@@ -47,7 +47,7 @@
 # pragma warning(disable: 4756)
 #endif
 
-/* Max nesting depth of objects and arrays */
+
 #define CJ5_MAX_NESTING 32
 
 #define CJ5__FOURCC(_a, _b, _c, _d)                         \
@@ -156,9 +156,9 @@ cj5__parse_string(cj5__parser *parser) {
                 }
                 for(unsigned int i = 0; i < 4; i++) {
                     // If it isn't a hex character we have an error
-                    if(!(json5[parser->pos] >= 48 && json5[parser->pos] <= 57) && /* 0-9 */
-                       !(json5[parser->pos] >= 65 && json5[parser->pos] <= 70) && /* A-F */
-                       !(json5[parser->pos] >= 97 && json5[parser->pos] <= 102))  /* a-f */
+                    if(!(json5[parser->pos] >= 48 && json5[parser->pos] <= 57) && 
+                       !(json5[parser->pos] >= 65 && json5[parser->pos] <= 70) && 
+                       !(json5[parser->pos] >= 97 && json5[parser->pos] <= 102))  
                         {
                             parser->error = CJ5_ERROR_INVALID;
                             return;
@@ -322,7 +322,7 @@ cj5__skip_comment(cj5__parser* parser) {
     if(json5[parser->pos] == '/')
         goto skip_line;
 
-    // Multi-line comments begin with '/*' and end with '*/'
+    // Multi-line comments begin with ''
     if(json5[parser->pos] == '*') {
         parser->pos++;
         for(; parser->pos + 1 < parser->len; parser->pos++) {

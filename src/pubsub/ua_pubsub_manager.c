@@ -1,21 +1,10 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * Copyright (c) 2017-2022 Fraunhofer IOSB (Author: Andreas Ebner)
- * Copyright (c) 2018 Fraunhofer IOSB (Author: Julius Pfrommer)
- * Copyright (c) 2021 Fraunhofer IOSB (Author: Jan Hermes)
- * Copyright (c) 2022 Siemens AG (Author: Thomas Fischer)
- * Copyright (c) 2022 Fraunhofer IOSB (Author: Noel Graf)
- * Copyright (c) 2022 Linutronix GmbH (Author: Muddasir Shakil)
- */
 
-#include <open62541/types.h>
+#include <opcua/types.h>
 #include "ua_pubsub.h"
 #include "ua_pubsub_ns0.h"
 #include "server/ua_server_internal.h"
 
-#ifdef UA_ENABLE_PUBSUB /* conditional compilation */
+#ifdef UA_ENABLE_PUBSUB 
 
 #ifdef UA_ENABLE_PUBSUB_SKS
 #include "ua_pubsub_keystorage.h"
@@ -101,7 +90,7 @@ UA_PublisherId_toVariant(const UA_PublisherId *p, UA_Variant *dst) {
         UA_Variant_setScalar(dst, &p2->id.uint64, &UA_TYPES[UA_TYPES_UINT64]); break;
     case UA_PUBLISHERIDTYPE_STRING:
         UA_Variant_setScalar(dst, &p2->id.string, &UA_TYPES[UA_TYPES_STRING]); break;
-    default: break; /* This is not possible if the PublisherId is well-defined */
+    default: break; 
     }
 }
 
@@ -172,7 +161,7 @@ UA_ReserveId_isFree(UA_Server *server, UA_UInt16 id, UA_String transportProfileU
                     UA_ReserveIdType reserveIdType) {
     UA_PubSubManager *psm = &server->pubSubManager;
 
-    /* Is the id already in use? */
+    
     UA_ReserveId compare;
     compare.id = id;
     compare.reserveIdType = reserveIdType;
@@ -189,7 +178,7 @@ UA_ReserveId_isFree(UA_Server *server, UA_UInt16 id, UA_String transportProfileU
                                    &transportProfileUri) &&
                    writerGroup->config.writerGroupId == id)
                     return false;
-            /* reserveIdType == UA_DATA_SET_WRITER */
+            
             } else {
                 UA_DataSetWriter *currentWriter;
                 LIST_FOREACH(currentWriter, &writerGroup->writers, listEntry) {
@@ -207,9 +196,9 @@ UA_ReserveId_isFree(UA_Server *server, UA_UInt16 id, UA_String transportProfileU
 static UA_UInt16
 UA_ReserveId_createId(UA_Server *server,  UA_NodeId sessionId,
                       UA_String transportProfileUri, UA_ReserveIdType reserveIdType) {
-    /* Total number of possible Ids */
+    
     UA_UInt16 numberOfIds = 0x8000;
-    /* Contains next possible free Id */
+    
     static UA_UInt16 next_id_writerGroup = UA_RESERVEID_FIRST_ID;
     static UA_UInt16 next_id_writer = UA_RESERVEID_FIRST_ID;
     UA_UInt16 next_id;
@@ -262,7 +251,7 @@ struct RemoveInactiveReserveIdContext {
     UA_ReserveIdTree newTree;
 };
 
-/* Remove ReserveIds that are not attached to any session */
+
 static void *
 removeInactiveReserveId(void *context, UA_ReserveId *elem) {
     struct RemoveInactiveReserveIdContext *ctx =
@@ -303,7 +292,7 @@ UA_PubSubManager_reserveIds(UA_Server *server, UA_NodeId sessionId, UA_UInt16 nu
                             UA_UInt16 **writerGroupIds, UA_UInt16 **dataSetWriterIds) {
     UA_PubSubManager_freeIds(server);
 
-    /* Check the validation of the transportProfileUri */
+    
     UA_String profile_1 = UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-mqtt-uadp");
     UA_String profile_2 = UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-mqtt-json");
     UA_String profile_3 = UA_STRING("http://opcfoundation.org/UA-Profile/Transport/pubsub-udp-uadp");
@@ -328,16 +317,12 @@ UA_PubSubManager_reserveIds(UA_Server *server, UA_NodeId sessionId, UA_UInt16 nu
     return UA_STATUSCODE_GOOD;
 }
 
-/* Calculate the time difference between current time and UTC (00:00) on January
- * 1, 2000. */
 UA_UInt32
 UA_PubSubConfigurationVersionTimeDifference(UA_DateTime now) {
     UA_UInt32 timeDiffSince2000 = (UA_UInt32)(now - UA_DATETIMESTAMP_2000);
     return timeDiffSince2000;
 }
 
-/* Generate a new unique NodeId. This NodeId will be used for the information
- * model representation of PubSub entities. */
 #ifndef UA_ENABLE_PUBSUB_INFORMATIONMODEL
 void
 UA_PubSubManager_generateUniqueNodeId(UA_PubSubManager *psm, UA_NodeId *nodeId) {
@@ -367,7 +352,7 @@ generateRandomUInt64(UA_Server *server) {
     return id;
 }
 
-/* Initialization the PubSub configuration. */
+
 void
 UA_PubSubManager_init(UA_Server *server, UA_PubSubManager *psm) {
     //TODO: Using the Mac address to generate the defaultPublisherId.
@@ -392,27 +377,25 @@ UA_PubSubManager_shutdown(UA_Server *server, UA_PubSubManager *psm) {
     }
 }
 
-/* Delete the current PubSub configuration including all nested members. This
- * action also delete the configured PubSub transport Layers. */
 void
 UA_PubSubManager_delete(UA_Server *server, UA_PubSubManager *psm) {
     UA_LOG_INFO(server->config.logging, UA_LOGCATEGORY_SERVER,
                 "PubSub cleanup was called.");
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Remove Connections - this also remove WriterGroups and ReaderGroups */
+    
     UA_PubSubConnection *tmpConnection1, *tmpConnection2;
     TAILQ_FOREACH_SAFE(tmpConnection1, &psm->connections, listEntry, tmpConnection2) {
         UA_PubSubConnection_delete(server, tmpConnection1);
     }
 
-    /* Remove the DataSets */
+    
     UA_PublishedDataSet *tmpPDS1, *tmpPDS2;
     TAILQ_FOREACH_SAFE(tmpPDS1, &psm->publishedDataSets, listEntry, tmpPDS2){
         UA_PublishedDataSet_remove(server, tmpPDS1);
     }
 
-    /* Remove the TopicAssigns */
+    
     UA_TopicAssign *tmpTopicAssign1, *tmpTopicAssign2;
     TAILQ_FOREACH_SAFE(tmpTopicAssign1, &psm->topicAssign, listEntry, tmpTopicAssign2){
         psm->topicAssignSize--;
@@ -420,24 +403,24 @@ UA_PubSubManager_delete(UA_Server *server, UA_PubSubManager *psm) {
         UA_free(tmpTopicAssign1);
     }
 
-    /* Remove the ReserveIds*/
+    
     ZIP_ITER(UA_ReserveIdTree, &psm->reserveIds, removeReserveId, NULL);
     psm->reserveIdsSize = 0;
 
-    /* Delete subscribed datasets */
+    
     UA_StandaloneSubscribedDataSet *tmpSDS1, *tmpSDS2;
     TAILQ_FOREACH_SAFE(tmpSDS1, &psm->subscribedDataSets, listEntry, tmpSDS2) {
         UA_StandaloneSubscribedDataSet_remove(server, tmpSDS1);
     }
 
 #ifdef UA_ENABLE_PUBSUB_SKS
-    /* Remove the SecurityGroups */
+    
     UA_SecurityGroup *tmpSG1, *tmpSG2;
     TAILQ_FOREACH_SAFE(tmpSG1, &psm->securityGroups, listEntry, tmpSG2) {
         removeSecurityGroup(server, tmpSG1);
     }
 
-    /* Remove the keyStorages */
+    
     UA_PubSubKeyStorage *ks, *ksTmp;
     LIST_FOREACH_SAFE(ks, &psm->pubSubKeyList, keyStorageList, ksTmp) {
         UA_PubSubKeyStorage_delete(server, ks);
@@ -517,15 +500,13 @@ UA_PubSubComponent_startMonitoring(UA_Server *server, UA_NodeId Id,
         return UA_STATUSCODE_BADNOTSUPPORTED;
     }
 
-    /* No timeout configured */
+    
     if(reader->config.messageReceiveTimeout <= 0.0) {
         UA_LOG_WARNING_PUBSUB(server->config.logging, reader,
                               "Cannot monitor timeout for messageReceiveTimeout == 0");
         return UA_STATUSCODE_GOOD;
     }
 
-    /* Use a timed callback, because one notification is enough, we assume that
-     * MessageReceiveTimeout configuration is in [ms]. */
     UA_EventLoop *el = server->config.eventLoop;
     UA_StatusCode ret =
         el->addCyclicCallback(el, (UA_Callback)monitoringReceiveTimeoutOnce, server,
@@ -657,8 +638,6 @@ UA_PubSubComponent_deleteMonitoring(UA_Server *server, UA_NodeId Id,
         return UA_STATUSCODE_BADNOTSUPPORTED;
     }
 
-    /* This implementation only stops monitoring and does no other cleanup.
-     * Other implementations might do it differently. */
     if(reader->msgRcvTimeoutTimerId != 0) {
         UA_PubSubComponent_stopMonitoring(server, Id, eComponentType,
                                           eMonitoringType, data);
@@ -685,6 +664,6 @@ UA_PubSubManager_setDefaultMonitoringCallbacks(UA_PubSubMonitoringInterface *mif
     return UA_STATUSCODE_GOOD;
 }
 
-#endif /* UA_ENABLE_PUBSUB_MONITORING */
+#endif 
 
-#endif /* UA_ENABLE_PUBSUB */
+#endif 

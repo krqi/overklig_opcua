@@ -11,5 +11,5 @@
 	branch = master
 [submodule "deps/nodesetLoader"]
 	path = deps/nodesetLoader
-	url = https://github.com/open62541/nodesetLoader
+	url = https://github.com/opcua/nodesetLoader
 	branch = master

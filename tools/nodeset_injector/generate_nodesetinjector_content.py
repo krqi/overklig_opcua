@@ -84,7 +84,7 @@ def generate_code():
     #########################
 
     print_include('''
-#include <open62541/{namespace}.h>
+#include <opcua/{namespace}.h>
 //<
 '''.format(namespace=args.namespace))
 
@@ -93,7 +93,7 @@ def generate_code():
     #########################
 
     print_function_call('''
-/* {namespace} */
+
 retval |= {namespace}(server);
 if(retval != UA_STATUSCODE_GOOD) {{
 UA_LOG_ERROR(UA_Log_Stdout, UA_LOGCATEGORY_SERVER, "Adding the {namespace} failed. Please check previous error output.");

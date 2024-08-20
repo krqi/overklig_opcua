@@ -1,17 +1,9 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2020 (c) Wind River Systems, Inc.
- *    Copyright 2020 (c) basysKom GmbH
- *
- */
 
 #ifndef SECURITYPOLICY_OPENSSL_COMMON_H_
 #define SECURITYPOLICY_OPENSSL_COMMON_H_
 
-#include <open62541/util.h>
-#include <open62541/plugin/securitypolicy.h>
+#include <opcua/util.h>
+#include <opcua/plugin/securitypolicy.h>
 
 #if defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL)
 
@@ -78,9 +70,6 @@ UA_Openssl_RSA_Oaep_Sha2_Decrypt (UA_ByteString *data,
                             EVP_PKEY *privateKey);
 
 UA_StatusCode
-UA_Openssl_RSA_OAEP_Encrypt(UA_ByteString *data, /* The data that is encrypted.
-                                                    The encrypted data will overwrite
-                                                    the data that was supplied.  */
                              size_t paddingSize, X509 *publicX509);
 
 UA_StatusCode
@@ -119,12 +108,12 @@ UA_OpenSSL_HMAC_SHA256_Sign(const UA_ByteString *message,
 UA_StatusCode
 UA_OpenSSL_AES_256_CBC_Decrypt(const UA_ByteString *iv,
                                const UA_ByteString *key,
-                               UA_ByteString *data  /* [in/out]*/);
+                               UA_ByteString *data  );
 
 UA_StatusCode
 UA_OpenSSL_AES_256_CBC_Encrypt(const UA_ByteString *iv,
                                const UA_ByteString *key,
-                               UA_ByteString *data  /* [in/out]*/);
+                               UA_ByteString *data  );
 
 UA_StatusCode
 UA_OpenSSL_X509_compare(const UA_ByteString *cert, const X509 *b);
@@ -168,12 +157,12 @@ UA_Openssl_RSA_PKCS1_V15_Encrypt(UA_ByteString *data,
 UA_StatusCode
 UA_OpenSSL_AES_128_CBC_Decrypt(const UA_ByteString *iv,
                                const UA_ByteString *key,
-                               UA_ByteString *data  /* [in/out]*/);
+                               UA_ByteString *data  );
 
 UA_StatusCode
 UA_OpenSSL_AES_128_CBC_Encrypt(const UA_ByteString *iv,
                                const UA_ByteString *key,
-                               UA_ByteString *data  /* [in/out]*/);
+                               UA_ByteString *data  );
 
 UA_StatusCode
 UA_OpenSSL_CreateSigningRequest(EVP_PKEY *localPrivateKey,
@@ -201,6 +190,6 @@ UA_OpenSSL_LoadLocalCertificate(const UA_ByteString *certificate, UA_ByteString 
 
 _UA_END_DECLS
 
-#endif /* defined(UA_ENABLE_ENCRYPTION_OPENSSL) || defined(UA_ENABLE_ENCRYPTION_LIBRESSL) */
+#endif 
 
-#endif /* SECURITYPOLICY_OPENSSL_COMMON_H_ */
+#endif 

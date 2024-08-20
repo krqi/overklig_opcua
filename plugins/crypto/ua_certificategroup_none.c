@@ -1,11 +1,5 @@
-/* This work is licensed under a Creative Commons CCZero 1.0 Universal License.
- * See http://creativecommons.org/publicdomain/zero/1.0/ for more information.
- *
- *    Copyright 2020 (c) Julius Pfrommer, Fraunhofer IOSB
- *    Copyright 2024 (c) Fraunhofer IOSB (Author: Noel Graf)
- */
 
-#include <open62541/plugin/certificategroup_default.h>
+#include <opcua/plugin/certificategroup_default.h>
 
 static UA_StatusCode
 verifyCertificateAllowAll(UA_CertificateGroup *certGroup,
@@ -21,7 +15,7 @@ clearVerifyAllowAll(UA_CertificateGroup *certGroup) {
 }
 
 void UA_CertificateGroup_AcceptAll(UA_CertificateGroup *certGroup) {
-    /* Clear the structure, as it may have already been initialized. */
+    
     UA_NodeId groupId = certGroup->certificateGroupId;
     if(certGroup->clear)
         certGroup->clear(certGroup);

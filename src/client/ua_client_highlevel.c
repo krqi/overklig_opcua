@@ -1,22 +1,8 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2015-2021 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2015 (c) Oleksiy Vasylyev
- *    Copyright 2017 (c) Florian Palm
- *    Copyright 2016 (c) Chris Iatrou
- *    Copyright 2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2018 (c) Fabian Arndt
- *    Copyright 2018 (c) Peter Rustler, basyskom GmbH
- */
 
-#include <open62541/client_highlevel.h>
-#include <open62541/client_highlevel_async.h>
+#include <opcua/client_highlevel.h>
+#include <opcua/client_highlevel_async.h>
 #include "util/ua_util_internal.h"
 
-/* The highlevel client API is an "outer onion layer". This file does not
- * include ua_client_internal.h on purpose. */
 
 UA_StatusCode
 UA_Client_NamespaceGetIndex(UA_Client *client, UA_String *namespaceUri,
@@ -91,9 +77,9 @@ UA_Client_forEachChildNodeCall(UA_Client *client, UA_NodeId parentNodeId,
     return retval;
 }
 
-/*******************/
-/* Node Management */
-/*******************/
+
+
+
 
 UA_StatusCode
 UA_Client_addReference(UA_Client *client, const UA_NodeId sourceNodeId,
@@ -219,7 +205,7 @@ __UA_Client_addNode(UA_Client *client, const UA_NodeClass nodeClass,
         return UA_STATUSCODE_BADUNEXPECTEDERROR;
     }
 
-    /* Move the id of the created node */
+    
     retval = response.results[0].statusCode;
     if(retval == UA_STATUSCODE_GOOD && outNewNodeId) {
         *outNewNodeId = response.results[0].addedNodeId;
@@ -230,16 +216,16 @@ __UA_Client_addNode(UA_Client *client, const UA_NodeClass nodeClass,
     return retval;
 }
 
-/********/
-/* Call */
-/********/
+
+
+
 
 UA_StatusCode
 UA_Client_call(UA_Client *client, const UA_NodeId objectId,
                const UA_NodeId methodId, size_t inputSize,
                const UA_Variant *input, size_t *outputSize,
                UA_Variant **output) {
-    /* Set up the request */
+    
     UA_CallRequest request;
     UA_CallRequest_init(&request);
     UA_CallMethodRequest item;
@@ -251,7 +237,7 @@ UA_Client_call(UA_Client *client, const UA_NodeId objectId,
     request.methodsToCall = &item;
     request.methodsToCallSize = 1;
 
-    /* Call the service */
+    
     UA_CallResponse response = UA_Client_Service_call(client, request);
     UA_StatusCode retval = response.responseHeader.serviceResult;
     if(retval == UA_STATUSCODE_GOOD) {
@@ -265,7 +251,7 @@ UA_Client_call(UA_Client *client, const UA_NodeId objectId,
         return retval;
     }
 
-    /* Move the output arguments */
+    
     if(output != NULL && outputSize != NULL) {
         *output = response.results[0].outputArguments;
         *outputSize = response.results[0].outputArgumentsSize;
@@ -276,9 +262,9 @@ UA_Client_call(UA_Client *client, const UA_NodeId objectId,
     return retval;
 }
 
-/********************/
-/* Write Attributes */
-/********************/
+
+
+
 
 UA_StatusCode
 __UA_Client_writeAttribute(UA_Client *client, const UA_NodeId *nodeId,
@@ -299,8 +285,6 @@ __UA_Client_writeAttribute(UA_Client *client, const UA_NodeId *nodeId,
               inDataType == &UA_TYPES[UA_TYPES_DATAVALUE]) {
         wValue.value = *(const UA_DataValue*)in;
     } else {
-        /* Hack to get rid of the const annotation.
-         * The value is never written into. */
         UA_Variant_setScalar(&wValue.value.value, (void*)(uintptr_t)in, inDataType);
         wValue.value.hasValue = true;
     }
@@ -355,9 +339,9 @@ UA_Client_writeArrayDimensionsAttribute(UA_Client *client, const UA_NodeId nodeI
     return retval;
 }
 
-/*******************/
-/* Read Attributes */
-/*******************/
+
+
+
 
 UA_StatusCode
 __UA_Client_readAttribute(UA_Client *client, const UA_NodeId *nodeId,
@@ -384,19 +368,19 @@ __UA_Client_readAttribute(UA_Client *client, const UA_NodeId *nodeId,
         return retval;
     }
 
-    /* Set the StatusCode */
+    
     UA_DataValue *res = response.results;
     if(res->hasStatus)
         retval = res->status;
 
-    /* Return early of no value is given */
+    
     if(!res->hasValue) {
         retval = UA_STATUSCODE_BADUNEXPECTEDERROR;
         UA_ReadResponse_clear(&response);
         return retval;
     }
 
-    /* Copy value into out */
+    
     if(attributeId == UA_ATTRIBUTEID_VALUE) {
         memcpy(out, &res->value, sizeof(UA_Variant));
         UA_Variant_init(&res->value);
@@ -436,7 +420,7 @@ processReadArrayDimensionsResult(UA_ReadResponse *response,
        res->value.type != &UA_TYPES[UA_TYPES_UINT32])
         return UA_STATUSCODE_BADUNEXPECTEDERROR;
 
-    /* Move results */
+    
     *outArrayDimensions = (UA_UInt32*)res->value.data;
     *outArrayDimensionsSize = res->value.arrayLength;
     res->value.data = NULL;
@@ -464,9 +448,9 @@ UA_Client_readArrayDimensionsAttribute(UA_Client *client, const UA_NodeId nodeId
     return retval;
 }
 
-/*********************/
-/* Historical Access */
-/*********************/
+
+
+
 
 static UA_HistoryReadResponse
 __UA_Client_HistoryRead(UA_Client *client, const UA_NodeId *nodeId,
@@ -490,7 +474,7 @@ __UA_Client_HistoryRead(UA_Client *client, const UA_NodeId *nodeId,
     request.timestampsToReturn = timestampsToReturn; // Defaults to Source
     request.releaseContinuationPoints = releaseConti; // No values are returned, if true
 
-    /* Build ReadDetails */
+    
     request.historyReadDetails = *details;
 
     return UA_Client_Service_historyRead(client, request);
@@ -509,7 +493,7 @@ __UA_Client_HistoryRead_service(UA_Client *client, const UA_NodeId *nodeId,
     UA_StatusCode retval = UA_STATUSCODE_GOOD;
 
     do {
-        /* We release the continuation point, if no more data is requested by the user */
+        
         UA_Boolean cleanup = !fetchMore && continuationAvail;
         UA_HistoryReadResponse response =
             __UA_Client_HistoryRead(client, nodeId, details, indexRange, timestampsToReturn, continuationPoint, cleanup);
@@ -533,15 +517,15 @@ cleanup:    UA_HistoryReadResponse_clear(&response);
 
         UA_HistoryReadResult *res = response.results;
 
-        /* Clear old and check / store new continuation point */
+        
         UA_ByteString_clear(&continuationPoint);
         UA_ByteString_copy(&res->continuationPoint, &continuationPoint);
         continuationAvail = !UA_ByteString_equal(&continuationPoint, &UA_BYTESTRING_NULL);
 
-        /* Client callback with possibility to request further values */
+        
         fetchMore = callback(client, nodeId, continuationAvail, &res->historyData, callbackContext);
 
-        /* Regular cleanup */
+        
         UA_HistoryReadResponse_clear(&response);
     } while(continuationAvail);
 
@@ -731,9 +715,9 @@ cleanup:
     return ret;
 }
 
-/*******************/
-/* Async Functions */
-/*******************/
+
+
+
 
 UA_StatusCode
 __UA_Client_writeAttribute_async(UA_Client *client, const UA_NodeId *nodeId,
@@ -750,7 +734,7 @@ __UA_Client_writeAttribute_async(UA_Client *client, const UA_NodeId *nodeId,
     if(attributeId == UA_ATTRIBUTEID_VALUE)
         wValue.value.value = *(const UA_Variant*) in;
     else
-        /* hack. is never written into. */
+        
         UA_Variant_setScalar(&wValue.value.value, (void*) (uintptr_t) in,
                 inDataType);
     wValue.value.hasValue = true;
@@ -815,23 +799,21 @@ __UA_Client_call_async(UA_Client *client, const UA_NodeId objectId,
             &UA_TYPES[UA_TYPES_CALLRESPONSE], userdata, reqId);
 }
 
-/* UA_StatusCode */
-/* UA_Cient_translateBrowsePathsToNodeIds_async(UA_Client *client, char **paths, */
-/*                                              UA_UInt32 *ids, size_t pathSize, */
-/*                                              UA_ClientAsyncTranslateCallback callback, */
-/*                                              void *userdata, UA_UInt32 *reqId) { */
-/*     return UA_STATUSCODE_BADNOTIMPLEMENTED; */
-/* } */
 
-/*************************/
-/* Read Single Attribute */
-/*************************/
+
+
+
+
+
+
+
+
+
+
 
 typedef struct {
     UA_ClientAsyncOperationCallback userCallback;
     void *userContext;
-    const UA_DataType *resultType; /* DataValue -> Value attribute,
-                                    * Variant -> ArrayDimensions attribute */
 } UA_AttributeReadContext;
 
 static void
@@ -843,18 +825,18 @@ AttributeReadCallback(UA_Client *client, void *userdata,
 
     UA_DataValue *dv = NULL;
 
-    /* Check the ServiceResult */
+    
     UA_StatusCode res = rr->responseHeader.serviceResult;
     if(res != UA_STATUSCODE_GOOD)
         goto finish;
 
-    /* Check result array size */
+    
     if(rr->resultsSize != 1) {
         res = UA_STATUSCODE_BADINTERNALERROR;
         goto finish;
     }
 
-    /* A Value attribute */
+    
     dv = &rr->results[0];
     if(ctx->resultType == &UA_TYPES[UA_TYPES_DATAVALUE]) {
         ctx->userCallback(client, ctx->userContext, requestId,
@@ -862,7 +844,7 @@ AttributeReadCallback(UA_Client *client, void *userdata,
         goto finish;
     }
 
-    /* An ArrayDimensions attribute. Has to be an array of UInt32. */
+    
     if(ctx->resultType == &UA_TYPES[UA_TYPES_VARIANT]) {
         if(dv->hasValue &&
            UA_Variant_hasArrayType(&dv->value, &UA_TYPES[UA_TYPES_UINT32])) {
@@ -874,13 +856,13 @@ AttributeReadCallback(UA_Client *client, void *userdata,
         goto finish;
     }
 
-    /* Check we have a value */
+    
     if(!dv->hasValue) {
         res = UA_STATUSCODE_BADINTERNALERROR;
         goto finish;
     }
 
-    /* Check the type. Try to adjust "in situ" if no match. */
+    
     if(!UA_Variant_hasScalarType(&dv->value, ctx->resultType)) {
         adjustType(&dv->value, ctx->resultType);
         if(!UA_Variant_hasScalarType(&dv->value, ctx->resultType)) {
@@ -889,7 +871,7 @@ AttributeReadCallback(UA_Client *client, void *userdata,
         }
     }
 
-    /* Callback into userland */
+    
     ctx->userCallback(client, ctx->userContext, requestId,
                       UA_STATUSCODE_GOOD, dv->value.data);
 
@@ -902,7 +884,7 @@ AttributeReadCallback(UA_Client *client, void *userdata,
 static UA_StatusCode
 readAttribute_async(UA_Client *client, const UA_ReadValueId *rvi,
                     UA_TimestampsToReturn timestampsToReturn,
-                    const UA_DataType *resultType, /* For the specialized reads */
+                    const UA_DataType *resultType, 
                     UA_ClientAsyncOperationCallback callback,
                     void *userdata, UA_UInt32 *requestId) {
     UA_AttributeReadContext *ctx = (UA_AttributeReadContext*)
@@ -916,7 +898,7 @@ readAttribute_async(UA_Client *client, const UA_ReadValueId *rvi,
 
     UA_ReadRequest request;
     UA_ReadRequest_init(&request);
-    request.nodesToRead = (UA_ReadValueId*)(uintptr_t)rvi; /* hack, treated as const */
+    request.nodesToRead = (UA_ReadValueId*)(uintptr_t)rvi; 
     request.nodesToReadSize = 1;
     request.timestampsToReturn = timestampsToReturn;
 
@@ -935,12 +917,12 @@ UA_Client_readAttribute_async(UA_Client *client, const UA_ReadValueId *rvi,
                               UA_ClientAsyncReadAttributeCallback callback,
                               void *userdata, UA_UInt32 *requestId) {
     return readAttribute_async(client, rvi, timestampsToReturn,
-                               &UA_TYPES[UA_TYPES_DATAVALUE], /* special handling */
+                               &UA_TYPES[UA_TYPES_DATAVALUE], 
                                (UA_ClientAsyncOperationCallback)callback,
                                userdata, requestId);
 }
 
-/* Helper to keep the code short */
+
 static UA_StatusCode
 readAttribute_simpleAsync(UA_Client *client, const UA_NodeId *nodeId,
                           UA_AttributeId attributeId, const UA_DataType *resultType,
@@ -959,7 +941,7 @@ UA_Client_readValueAttribute_async(UA_Client *client, const UA_NodeId nodeId,
                                    UA_ClientAsyncReadValueAttributeCallback callback,
                                    void *userdata, UA_UInt32 *requestId) {
     return readAttribute_simpleAsync(client, &nodeId, UA_ATTRIBUTEID_VALUE,
-                                     &UA_TYPES[UA_TYPES_DATAVALUE], /* special hndling */
+                                     &UA_TYPES[UA_TYPES_DATAVALUE], 
                                      (UA_ClientAsyncOperationCallback)callback,
                                      userdata, requestId);
 }
@@ -979,7 +961,7 @@ UA_Client_readArrayDimensionsAttribute_async(UA_Client *client, const UA_NodeId 
                                              UA_ClientReadArrayDimensionsAttributeCallback callback,
                                              void *userdata, UA_UInt32 *requestId) {
     return readAttribute_simpleAsync(client, &nodeId, UA_ATTRIBUTEID_ARRAYDIMENSIONS,
-                                     &UA_TYPES[UA_TYPES_VARIANT], /* special handling */
+                                     &UA_TYPES[UA_TYPES_VARIANT], 
                                      (UA_ClientAsyncOperationCallback)callback,
                                      userdata, requestId);
 }

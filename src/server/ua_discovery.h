@@ -1,15 +1,3 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2014-2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2014, 2017 (c) Florian Palm
- *    Copyright 2015-2016 (c) Sten Grüner
- *    Copyright 2015 (c) Chris Iatrou
- *    Copyright 2015-2016 (c) Oleksiy Vasylyev
- *    Copyright 2016-2017 (c) Stefan Profanter, fortiss GmbH
- *    Copyright 2017 (c) Julian Grothoff
- */
 
 #ifndef UA_DISCOVERY_MANAGER_H_
 #define UA_DISCOVERY_MANAGER_H_
@@ -26,10 +14,8 @@ typedef struct registeredServer {
     UA_DateTime lastSeen;
 } registeredServer;
 
-/* Store async register service calls. So we can cancel outstanding requests
- * during shutdown. */
 typedef struct {
-    UA_DelayedCallback cleanupCallback; /* delayed cleanup */
+    UA_DelayedCallback cleanupCallback; 
     UA_Server *server;
     UA_DiscoveryManager *dm;
     UA_Client *client;
@@ -47,14 +33,6 @@ typedef struct {
 #include "mdnsd/libmdnsd/mdnsd.h"
 #define UA_MAXMDNSRECVSOCKETS 8
 
-/**
- * TXT record:
- * [servername]-[hostname]._opcua-tcp._tcp.local. TXT path=/ caps=NA,DA,...
- *
- * A/AAAA record for all ip addresses:
- * [servername]-[hostname]._opcua-tcp._tcp.local. A [ip].
- * [hostname]. A [ip].
- */
 
 typedef struct serverOnNetwork {
     LIST_ENTRY(serverOnNetwork) pointers;
@@ -79,9 +57,9 @@ struct UA_DiscoveryManager {
 
     UA_UInt64 discoveryCallbackId;
 
-    UA_Server *server; /* backpointer */
+    UA_Server *server; 
 
-    /* Outstanding requests. So they can be cancelled during shutdown. */
+    
     asyncRegisterRequest registerRequests[UA_MAXREGISTERREQUESTS];
 
     LIST_HEAD(, registeredServer) registeredServers;
@@ -97,8 +75,6 @@ struct UA_DiscoveryManager {
     size_t mdnsRecvConnectionsSize;
     UA_Boolean mdnsMainSrvAdded;
 
-    /* Full Domain Name of server itself. Used to detect if received mDNS
-     * message was from itself */
     UA_String selfFqdnMdnsRecord;
 
     LIST_HEAD(, serverOnNetwork) serverOnNetwork;
@@ -106,14 +82,14 @@ struct UA_DiscoveryManager {
     UA_UInt32 serverOnNetworkRecordIdCounter;
     UA_DateTime serverOnNetworkRecordIdLastReset;
 
-    /* hash mapping domain name to serverOnNetwork list entry */
+    
     struct serverOnNetwork_hash_entry* serverOnNetworkHash[SERVER_ON_NETWORK_HASH_SIZE];
 
     UA_Server_serverOnNetworkCallback serverOnNetworkCallback;
     void *serverOnNetworkCallbackData;
 
     UA_UInt64 mdnsCallbackId;
-# endif /* UA_ENABLE_DISCOVERY_MULTICAST */
+# endif 
 };
 
 void
@@ -123,14 +99,6 @@ UA_DiscoveryManager_setState(UA_Server *server,
 
 #ifdef UA_ENABLE_DISCOVERY_MULTICAST
 
-/* Sends out a new mDNS package for the given server data. This Method is
- * normally called when another server calls the RegisterServer Service on this
- * server. Then this server is responsible to send out a new mDNS package to
- * announce it.
- *
- * Additionally this method also adds the given server to the internal
- * serversOnNetwork list so that a client finds it when calling
- * FindServersOnNetwork. */
 void
 UA_Discovery_updateMdnsForDiscoveryUrl(UA_DiscoveryManager *dm, const UA_String serverName,
                                        const UA_MdnsDiscoveryConfiguration *mdnsConfig,
@@ -166,10 +134,10 @@ mdns_record_t *
 mdns_find_record(mdns_daemon_t *mdnsDaemon, unsigned short type,
                  const char *host, const char *rdname);
 
-#endif /* UA_ENABLE_DISCOVERY_MULTICAST */
+#endif 
 
-#endif /* UA_ENABLE_DISCOVERY */
+#endif 
 
 _UA_END_DECLS
 
-#endif /* UA_DISCOVERY_MANAGER_H_ */
+#endif 

@@ -1,14 +1,6 @@
-/* This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- *    Copyright 2018 (c) Fraunhofer IOSB (Author: Julius Pfrommer)
- *    Copyright 2018 (c) Thomas Stalder, Blue Time Concept SA
- *    Copyright 2019 (c) HMS Industrial Networks AB (Author: Jonas Green)
- */
 
 #include "ua_session.h"
-#include "open62541/types.h"
+#include "opcua/types.h"
 #include "ua_server_internal.h"
 #ifdef UA_ENABLE_SUBSCRIPTIONS
 #include "ua_subscription.h"
@@ -28,8 +20,6 @@ void UA_Session_init(UA_Session *session) {
 void UA_Session_clear(UA_Session *session, UA_Server* server) {
     UA_LOCK_ASSERT(&server->serviceMutex, 1);
 
-    /* Remove all Subscriptions. This may send out remaining publish
-     * responses. */
 #ifdef UA_ENABLE_SUBSCRIPTIONS
     UA_Subscription *sub, *tempsub;
     TAILQ_FOREACH_SAFE(sub, &session->subscriptions, sessionListEntry, tempsub) {
@@ -72,21 +62,19 @@ void UA_Session_clear(UA_Session *session, UA_Server* server) {
 
 void
 UA_Session_attachToSecureChannel(UA_Session *session, UA_SecureChannel *channel) {
-    /* Ensure the Session is not attached to another SecureChannel */
+    
     UA_Session_detachFromSecureChannel(session);
 
-    /* Add to singly-linked list */
+    
     session->next = channel->sessions;
     channel->sessions = session;
 
-    /* Add backpointer */
+    
     session->channel = channel;
 }
 
 void
 UA_Session_detachFromSecureChannel(UA_Session *session) {
-    /* Clean up the response queue. Their RequestId is bound to the
-     * SecureChannel so they cannot be reused. */
 #ifdef UA_ENABLE_SUBSCRIPTIONS
     UA_PublishResponseEntry *pre;
     while((pre = UA_Session_dequeuePublishReq(session))) {
@@ -95,7 +83,7 @@ UA_Session_detachFromSecureChannel(UA_Session *session) {
     }
 #endif
 
-    /* Remove from singly-linked list */
+    
     UA_SecureChannel *channel = session->channel;
     if(!channel)
         return;
@@ -109,7 +97,7 @@ UA_Session_detachFromSecureChannel(UA_Session *session) {
         elm->next = session->next;
     }
 
-    /* Reset the backpointer */
+    
     session->channel = NULL;
 }
 
@@ -119,7 +107,7 @@ UA_Session_generateNonce(UA_Session *session) {
     if(!channel || !channel->securityPolicy)
         return UA_STATUSCODE_BADINTERNALERROR;
 
-    /* Is the length of the previous nonce correct? */
+    
     if(session->serverNonce.length != UA_SESSION_NONCELENTH) {
         UA_ByteString_clear(&session->serverNonce);
         UA_StatusCode retval =
@@ -146,17 +134,15 @@ UA_Session_updateLifetime(UA_Session *session, UA_DateTime now,
 
 void
 UA_Session_attachSubscription(UA_Session *session, UA_Subscription *sub) {
-    /* Attach to the session */
+    
     sub->session = session;
 
-    /* Increase the count */
+    
     session->subscriptionsSize++;
 
-    /* Increase the number of outstanding retransmissions */
+    
     session->totalRetransmissionQueueSize += sub->retransmissionQueueSize;
 
-    /* Insert at the end of the subscriptions of the same priority / just before
-     * the subscriptions with the next lower priority. */
     UA_Subscription *after = NULL;
     TAILQ_FOREACH(after, &session->subscriptions, sessionListEntry) {
         if(after->priority < sub->priority) {
@@ -170,18 +156,18 @@ UA_Session_attachSubscription(UA_Session *session, UA_Subscription *sub) {
 void
 UA_Session_detachSubscription(UA_Server *server, UA_Session *session,
                               UA_Subscription *sub, UA_Boolean releasePublishResponses) {
-    /* Detach from the session */
+    
     sub->session = NULL;
     TAILQ_REMOVE(&session->subscriptions, sub, sessionListEntry);
 
-    /* Reduce the count */
+    
     UA_assert(session->subscriptionsSize > 0);
     session->subscriptionsSize--;
 
-    /* Reduce the number of outstanding retransmissions */
+    
     session->totalRetransmissionQueueSize -= sub->retransmissionQueueSize;
 
-    /* Send remaining publish responses if the last subscription was removed */
+    
     if(!releasePublishResponses || !TAILQ_EMPTY(&session->subscriptions))
         return;
     UA_PublishResponseEntry *pre;
@@ -199,7 +185,7 @@ UA_Subscription *
 UA_Session_getSubscriptionById(UA_Session *session, UA_UInt32 subscriptionId) {
     UA_Subscription *sub;
     TAILQ_FOREACH(sub, &session->subscriptions, sessionListEntry) {
-        /* Prevent lookup of subscriptions that are to be deleted with a statuschange */
+        
         if(sub->statusChange != UA_STATUSCODE_GOOD)
             continue;
         if(sub->subscriptionId == subscriptionId)
@@ -212,7 +198,7 @@ UA_Subscription *
 getSubscriptionById(UA_Server *server, UA_UInt32 subscriptionId) {
     UA_Subscription *sub;
     LIST_FOREACH(sub, &server->subscriptions, serverListEntry) {
-        /* Prevent lookup of subscriptions that are to be deleted with a statuschange */
+        
         if(sub->statusChange != UA_STATUSCODE_GOOD)
             continue;
         if(sub->subscriptionId == subscriptionId)
@@ -243,7 +229,7 @@ UA_Session_queuePublishReq(UA_Session *session, UA_PublishResponseEntry* entry,
 
 #endif
 
-/* Session Handling */
+
 
 UA_StatusCode
 UA_Server_closeSession(UA_Server *server, const UA_NodeId *sessionId) {
@@ -261,7 +247,7 @@ UA_Server_closeSession(UA_Server *server, const UA_NodeId *sessionId) {
     return res;
 }
 
-/* Session Attributes */
+
 
 #define UA_PROTECTEDATTRIBUTESSIZE 4
 static const UA_QualifiedName protectedAttributes[UA_PROTECTEDATTRIBUTESSIZE] = {
@@ -327,27 +313,27 @@ getSessionAttribute(UA_Server *server, const UA_NodeId *sessionId,
     UA_Variant localAttr;
 
     if(UA_QualifiedName_equal(&key, &protectedAttributes[0])) {
-        /* Return LocaleIds */
+        
         UA_Variant_setArray(&localAttr, session->localeIds,
                             session->localeIdsSize, &UA_TYPES[UA_TYPES_STRING]);
         attr = &localAttr;
     } else if(UA_QualifiedName_equal(&key, &protectedAttributes[1])) {
-        /* Return client description */
+        
         UA_Variant_setScalar(&localAttr, &session->clientDescription,
                              &UA_TYPES[UA_TYPES_APPLICATIONDESCRIPTION]);
         attr = &localAttr;
     } else if(UA_QualifiedName_equal(&key, &protectedAttributes[2])) {
-        /* Return session name */
+        
         UA_Variant_setScalar(&localAttr, &session->sessionName,
                              &UA_TYPES[UA_TYPES_STRING]);
         attr = &localAttr;
     } else if(UA_QualifiedName_equal(&key, &protectedAttributes[3])) {
-        /* Return client user id */
+        
         UA_Variant_setScalar(&localAttr, &session->clientUserIdOfSession,
                              &UA_TYPES[UA_TYPES_STRING]);
         attr = &localAttr;
     } else {
-        /* Get from the actual key-value list */
+        
         attr = UA_KeyValueMap_get(session->attributes, key);
         if(!attr)
             return UA_STATUSCODE_BADNOTFOUND;

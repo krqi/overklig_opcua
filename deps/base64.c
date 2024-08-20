@@ -1,13 +1,6 @@
-/*
- * Base64 encoding/decoding (RFC1341)
- * Copyright (c) 2005-2011, Jouni Malinen <j@w1.fi>
- *
- * This software may be distributed under the terms of the BSD license.
- * See README for more details.
- */
 
 #include "base64.h"
-#include <open62541/types.h>
+#include <opcua/types.h>
 
 static const unsigned char base64_table[65] =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
@@ -19,9 +12,9 @@ UA_base64(const unsigned char *src, size_t len, size_t *out_len) {
         return (unsigned char*)UA_EMPTY_ARRAY_SENTINEL;
     }
 
-	size_t olen = 4*((len + 2) / 3); /* 3-byte blocks to 4-byte */
+	size_t olen = 4*((len + 2) / 3); 
 	if(olen < len)
-		return NULL; /* integer overflow */
+		return NULL; 
 
 	unsigned char *out = (unsigned char*)UA_malloc(olen);
 	if(!out)
@@ -80,23 +73,23 @@ static unsigned char dtable[256] = {
 
 unsigned char *
 UA_unbase64(const unsigned char *src, size_t len, size_t *out_len) {
-    /* Empty base64 results in an empty byte-string */
+    
     if(len == 0) {
         *out_len = 0;
         return (unsigned char*)UA_EMPTY_ARRAY_SENTINEL;
     }
 
-    /* The input length must be a multiple of four */
+    
     if(len % 4 != 0)
 		return NULL;
 
-    /* Allocate the output string */
+    
 	size_t olen = len / 4 * 3;
     unsigned char *out = (unsigned char*)UA_malloc(olen);
 	if(!out)
 		return NULL;
 
-    /* Iterate over the input */
+    
 	size_t pad = 0;
     unsigned char count = 0;
     unsigned char block[4];
@@ -104,7 +97,7 @@ UA_unbase64(const unsigned char *src, size_t len, size_t *out_len) {
 	for(size_t i = 0; i < len; i++) {
 		unsigned char tmp = dtable[src[i]];
         if(tmp == 0x80)
-            goto error; /* Invalid input */
+            goto error; 
 
 		if(src[i] == '=')
 			pad++;
@@ -121,7 +114,7 @@ UA_unbase64(const unsigned char *src, size_t len, size_t *out_len) {
                 else if(pad == 2)
                     pos -= 2;
                 else
-                    goto error; /* Invalid padding */
+                    goto error; 
 				break;
             }
 			count = 0;
